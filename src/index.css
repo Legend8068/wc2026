@@ -1308,21 +1308,43 @@ footer .f-note {
 }
 
 /* ============================== RESPONSIVE ============================== */
+@media (max-width: 1150px) {
+  .hero {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 40px;
+    padding-bottom: 100px;
+  }
+  .hero-title {
+    align-items: center;
+  }
+  .hero-stats {
+    width: 100%;
+    max-width: 450px;
+    transform: none !important;
+  }
+  .hero-stats-label {
+    text-align: center;
+  }
+}
+
 @media (max-width: 900px) {
   .nav-links { display: none; }
-  .hero { padding-bottom: 90px; }
   .lc-score { font-size: 34px; }
 }
 
-@media (min-width: 901px) {
+@media (min-width: 1151px) {
   .hero-stats {
     transform: translateX(30px);
   }
 }
+
 @media (max-width: 520px) {
   #clock { display: none; }
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .groups-grid { grid-template-columns: 1fr; }
+  .stat-num.small { font-size: 18px; }
 }
 
 /* ============================== REDUCED MOTION ============================== */
