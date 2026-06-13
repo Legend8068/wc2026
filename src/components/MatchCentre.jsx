@@ -151,29 +151,37 @@ export default function MatchCentre({ snapshot }) {
         key={fx.id}
         onClick={canExpand ? () => toggleExpand(fx.id) : undefined}
       >
-        <div className="lc-head">
-          <span>{label}</span>
-          <span className={`lc-min${minCls}`}>{minTxt}</span>
-        </div>
-        <div className="lc-body">
-          <div className="lc-team">
-            <img src={D.flag(fx.a)} alt={teamA.name} />
-            <span className="nm">{teamA.name}</span>
+        <div className="lc-visuals">
+          <div className="lcv-panel lcv-home">
+            <div className="lcv-flag-wrap">
+              <img className="lcv-flag" src={D.flag(fx.a)} alt={teamA.name} />
+            </div>
+            <div className="lcv-name-bar">{teamA.name}</div>
           </div>
-          <div className="lc-score">
-            {st.sa === null ? (
-              <span className="colon">VS</span>
-            ) : (
-              <>
-                <ScoreDisplay value={st.sa} />
-                <span className="colon"> : </span>
-                <ScoreDisplay value={st.sb} />
-              </>
-            )}
+
+          <div className="lcv-center">
+            <div className="lcv-score-box">
+              {st.sa === null ? (
+                <span className="lcv-vs">VS</span>
+              ) : (
+                <>
+                  <ScoreDisplay value={st.sa} />
+                  <span className="lcv-colon">-</span>
+                  <ScoreDisplay value={st.sb} />
+                </>
+              )}
+            </div>
+            <div className="lcv-info-box">
+              <div className="lcv-label">{label}</div>
+              <div className={`lcv-time${minCls}`}>{minTxt}</div>
+            </div>
           </div>
-          <div className="lc-team">
-            <img src={D.flag(fx.b)} alt={teamB.name} />
-            <span className="nm">{teamB.name}</span>
+
+          <div className="lcv-panel lcv-away">
+            <div className="lcv-flag-wrap">
+              <img className="lcv-flag" src={D.flag(fx.b)} alt={teamB.name} />
+            </div>
+            <div className="lcv-name-bar">{teamB.name}</div>
           </div>
         </div>
 
@@ -260,16 +268,17 @@ export default function MatchCentre({ snapshot }) {
         </button>
       </div>
 
+      {tab === 'active' && activeMatches.length === 0 && recentMatches.length === 0 && (
+        <div className="live-empty">NO LIVE MATCHES AT THE MOMENT · SHOWING UPCOMING</div>
+      )}
+      {isUpcomingMode && tab === 'upcoming' && (
+        <div className="live-empty">NO MATCH IN PLAY — <b>UP NEXT</b></div>
+      )}
+      {isTournamentComplete && (
+        <div className="live-empty">TOURNAMENT COMPLETE — <b>SEE THE BRACKET FOR THE CHAMPION</b></div>
+      )}
+
       <div className="live-strip" id="live-strip">
-        {tab === 'active' && activeMatches.length === 0 && recentMatches.length === 0 && (
-          <div className="live-empty">NO LIVE MATCHES AT THE MOMENT · SHOWING UPCOMING</div>
-        )}
-        {isUpcomingMode && tab === 'upcoming' && (
-          <div className="live-empty">NO MATCH IN PLAY — <b>UP NEXT</b></div>
-        )}
-        {isTournamentComplete && (
-          <div className="live-empty">TOURNAMENT COMPLETE — <b>SEE THE BRACKET FOR THE CHAMPION</b></div>
-        )}
         {cards.map(renderCard)}
       </div>
     </RevealSection>

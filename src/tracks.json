@@ -1,0 +1,352 @@
+[
+  {
+    "id": "2026-1",
+    "title": "Jump",
+    "artist": "J Balvin & Amber Mark",
+    "year": 2026,
+    "audio": "/audio/jump.m4a"
+  },
+  {
+    "id": "2026-2",
+    "title": "Dai Dai",
+    "artist": "Shakira & Burna Boy",
+    "year": 2026,
+    "audio": "/audio/dai-dai.m4a"
+  },
+  {
+    "id": "2026-3",
+    "title": "Lighter",
+    "artist": "Jelly Roll & Carín León",
+    "year": 2026,
+    "audio": "/audio/lighter.m4a"
+  },
+  {
+    "id": "2026-4",
+    "title": "Echo",
+    "artist": "Daddy Yankee & Shenseea",
+    "year": 2026,
+    "audio": "/audio/echo.m4a"
+  },
+  {
+    "id": "2026-5",
+    "title": "Por Ella",
+    "artist": "Los Ángeles Azules & Belinda",
+    "year": 2026,
+    "audio": "/audio/por-ella.m4a"
+  },
+  {
+    "id": "2022-1",
+    "title": "Hayya Hayya",
+    "artist": "Trinidad Cardona, Davido & AISHA",
+    "year": 2022,
+    "audio": "/audio/hayya-hayya.m4a"
+  },
+  {
+    "id": "2022-2",
+    "title": "The World Is Yours To Take",
+    "artist": "Tears for Fears ft. Lil Baby",
+    "year": 2022,
+    "audio": "/audio/world-is-yours.m4a"
+  },
+  {
+    "id": "2010-1",
+    "title": "Waka Waka",
+    "artist": "Shakira",
+    "year": 2010,
+    "audio": "/audio/waka-waka.m4a"
+  },
+  {
+    "id": "2010-2",
+    "title": "Wavin' Flag",
+    "artist": "K'naan",
+    "year": 2010,
+    "audio": "/audio/wavin-flag.m4a"
+  },
+  {
+    "id": "custom-1",
+    "title": "I Could Be The One (Avicii Vs. Nicky Romero) [Radio Edit]",
+    "artist": "Avicii & Nicky Romero",
+    "year": "",
+    "audio": "/audio/Avicii%20%26%20Nicky%20Romero%20-%20I%20Could%20Be%20The%20One%20(Avicii%20Vs.%20Nicky%20Romero)%20%5BRadio%20Edit%5D.m4a"
+  },
+  {
+    "id": "custom-2",
+    "title": "Levels (Radio Edit)",
+    "artist": "Avicii",
+    "year": "",
+    "audio": "/audio/Avicii%20-%20Levels%20(Radio%20Edit).m4a"
+  },
+  {
+    "id": "custom-3",
+    "title": "The Nights",
+    "artist": "Avicii",
+    "year": "",
+    "audio": "/audio/Avicii%20-%20The%20Nights.m4a"
+  },
+  {
+    "id": "custom-4",
+    "title": "Wake Me Up",
+    "artist": "Avicii",
+    "year": "",
+    "audio": "/audio/Avicii%20-%20Wake%20Me%20Up.m4a"
+  },
+  {
+    "id": "custom-5",
+    "title": "Pump It",
+    "artist": "Black Eyed Peas",
+    "year": "",
+    "audio": "/audio/Black%20Eyed%20Peas%20-%20Pump%20It.m4a"
+  },
+  {
+    "id": "custom-6",
+    "title": "Where Is The Love？",
+    "artist": "Black Eyed Peas",
+    "year": "",
+    "audio": "/audio/Black%20Eyed%20Peas%20-%20Where%20Is%20The%20Love%EF%BC%9F.m4a"
+  },
+  {
+    "id": "custom-7",
+    "title": "Livin' On A Prayer",
+    "artist": "Bon Jovi",
+    "year": "",
+    "audio": "/audio/Bon%20Jovi%20-%20Livin'%20On%20A%20Prayer.m4a"
+  },
+  {
+    "id": "custom-8",
+    "title": "Con Calma (feat. Snow)",
+    "artist": "Daddy Yankee",
+    "year": "",
+    "audio": "/audio/Daddy%20Yankee%20-%20Con%20Calma%20(feat.%20Snow).m4a"
+  },
+  {
+    "id": "custom-9",
+    "title": "Upside Down",
+    "artist": "Diana Ross",
+    "year": "",
+    "audio": "/audio/Diana%20Ross%20-%20Upside%20Down.m4a"
+  },
+  {
+    "id": "custom-10",
+    "title": "Walking on a Dream",
+    "artist": "Empire Of The Sun",
+    "year": "",
+    "audio": "/audio/Empire%20Of%20The%20Sun%20-%20Walking%20on%20a%20Dream.m4a"
+  },
+  {
+    "id": "custom-11",
+    "title": "We Are the People",
+    "artist": "Empire Of The Sun",
+    "year": "",
+    "audio": "/audio/Empire%20Of%20The%20Sun%20-%20We%20Are%20the%20People.m4a"
+  },
+  {
+    "id": "custom-12",
+    "title": "Heat Waves",
+    "artist": "Glass Animals",
+    "year": "",
+    "audio": "/audio/Glass%20Animals%20-%20Heat%20Waves.m4a"
+  },
+  {
+    "id": "custom-13",
+    "title": "I Adore You (feat. Daecolm)",
+    "artist": "HUGEL, Topic & Arash",
+    "year": "",
+    "audio": "/audio/HUGEL%2C%20Topic%20%26%20Arash%20-%20I%20Adore%20You%20(feat.%20Daecolm).m4a"
+  },
+  {
+    "id": "custom-14",
+    "title": "On the Floor (feat. Pitbull)",
+    "artist": "Jennifer Lopez",
+    "year": "",
+    "audio": "/audio/Jennifer%20Lopez%20-%20On%20the%20Floor%20(feat.%20Pitbull).m4a"
+  },
+  {
+    "id": "custom-15",
+    "title": "Love Me Again",
+    "artist": "John Newman",
+    "year": "",
+    "audio": "/audio/John%20Newman%20-%20Love%20Me%20Again.m4a"
+  },
+  {
+    "id": "custom-16",
+    "title": "I Kissed a Girl",
+    "artist": "Katy Perry",
+    "year": "",
+    "audio": "/audio/Katy%20Perry%20-%20I%20Kissed%20a%20Girl.m4a"
+  },
+  {
+    "id": "custom-17",
+    "title": "Sonnentanz (feat. Will Heard) [Sun Don't Shine]",
+    "artist": "Klangkarussell",
+    "year": "",
+    "audio": "/audio/Klangkarussell%20-%20Sonnentanz%20(feat.%20Will%20Heard)%20%5BSun%20Don't%20Shine%5D.m4a"
+  },
+  {
+    "id": "custom-18",
+    "title": "Celebration (Single Version)",
+    "artist": "Kool & The Gang",
+    "year": "",
+    "audio": "/audio/Kool%20%26%20The%20Gang%20-%20Celebration%20(Single%20Version).m4a"
+  },
+  {
+    "id": "custom-19",
+    "title": "This Girl",
+    "artist": "Kungs & Cookin' On 3 Burners",
+    "year": "",
+    "audio": "/audio/Kungs%20%26%20Cookin'%20On%203%20Burners%20-%20This%20Girl.m4a"
+  },
+  {
+    "id": "custom-20",
+    "title": "Party Rock Anthem (feat. Lauren Bennett & GoonRock)",
+    "artist": "LMFAO",
+    "year": "",
+    "audio": "/audio/LMFAO%20-%20Party%20Rock%20Anthem%20(feat.%20Lauren%20Bennett%20%26%20GoonRock).m4a"
+  },
+  {
+    "id": "custom-21",
+    "title": "Avenir (Radio Edit)",
+    "artist": "Louane",
+    "year": "",
+    "audio": "/audio/Louane%20-%20Avenir%20(Radio%20Edit).m4a"
+  },
+  {
+    "id": "custom-22",
+    "title": "Despacito",
+    "artist": "Luis Fonsi & Daddy Yankee",
+    "year": "",
+    "audio": "/audio/Luis%20Fonsi%20%26%20Daddy%20Yankee%20-%20Despacito.m4a"
+  },
+  {
+    "id": "custom-23",
+    "title": "Échame La Culpa",
+    "artist": "Luis Fonsi & Demi Lovato",
+    "year": "",
+    "audio": "/audio/Luis%20Fonsi%20%26%20Demi%20Lovato%20-%20%C3%89chame%20La%20Culpa.m4a"
+  },
+  {
+    "id": "custom-24",
+    "title": "Bad Memories (feat. Elley Duhé & FAST BOY)",
+    "artist": "MEDUZA & James Carter",
+    "year": "",
+    "audio": "/audio/MEDUZA%20%26%20James%20Carter%20-%20Bad%20Memories%20(feat.%20Elley%20Duh%C3%A9%20%26%20FAST%20BOY).m4a"
+  },
+  {
+    "id": "custom-25",
+    "title": "Lose Control",
+    "artist": "MEDUZA, Becky Hill & Goodboys",
+    "year": "",
+    "audio": "/audio/MEDUZA%2C%20Becky%20Hill%20%26%20Goodboys%20-%20Lose%20Control.m4a"
+  },
+  {
+    "id": "custom-26",
+    "title": "Fire (Official UEFA EURO 2024 Song)",
+    "artist": "MEDUZA, OneRepublic & Leony",
+    "year": "",
+    "audio": "/audio/MEDUZA%2C%20OneRepublic%20%26%20Leony%20-%20Fire%20(Official%20UEFA%20EURO%202024%20Song).m4a"
+  },
+  {
+    "id": "custom-27",
+    "title": "Don't Call Me Up",
+    "artist": "Mabel",
+    "year": "",
+    "audio": "/audio/Mabel%20-%20Don't%20Call%20Me%20Up.m4a"
+  },
+  {
+    "id": "custom-28",
+    "title": "Sweet Caroline",
+    "artist": "Neil Diamond",
+    "year": "",
+    "audio": "/audio/Neil%20Diamond%20-%20Sweet%20Caroline.m4a"
+  },
+  {
+    "id": "custom-29",
+    "title": "Promiscuous (feat. Timbaland)",
+    "artist": "Nelly Furtado",
+    "year": "",
+    "audio": "/audio/Nelly%20Furtado%20-%20Promiscuous%20(feat.%20Timbaland).m4a"
+  },
+  {
+    "id": "custom-30",
+    "title": "Another One Bites the Dust",
+    "artist": "Queen",
+    "year": "",
+    "audio": "/audio/Queen%20-%20Another%20One%20Bites%20the%20Dust.m4a"
+  },
+  {
+    "id": "custom-31",
+    "title": "We Are the Champions",
+    "artist": "Queen",
+    "year": "",
+    "audio": "/audio/Queen%20-%20We%20Are%20the%20Champions.m4a"
+  },
+  {
+    "id": "custom-32",
+    "title": "No Lie (feat. Dua Lipa)",
+    "artist": "Sean Paul",
+    "year": "",
+    "audio": "/audio/Sean%20Paul%20-%20No%20Lie%20(feat.%20Dua%20Lipa).m4a"
+  },
+  {
+    "id": "custom-33",
+    "title": "Murder On The Dancefloor",
+    "artist": "Sophie Ellis-Bextor",
+    "year": "",
+    "audio": "/audio/Sophie%20Ellis-Bextor%20-%20Murder%20On%20The%20Dancefloor.m4a"
+  },
+  {
+    "id": "custom-34",
+    "title": "Wannabe",
+    "artist": "Spice Girls",
+    "year": "",
+    "audio": "/audio/Spice%20Girls%20-%20Wannabe.m4a"
+  },
+  {
+    "id": "custom-35",
+    "title": "Alors on danse (Radio Edit)",
+    "artist": "Stromae",
+    "year": "",
+    "audio": "/audio/Stromae%20-%20Alors%20on%20danse%20(Radio%20Edit).m4a"
+  },
+  {
+    "id": "custom-36",
+    "title": "Dynamite",
+    "artist": "Taio Cruz",
+    "year": "",
+    "audio": "/audio/Taio%20Cruz%20-%20Dynamite.m4a"
+  },
+  {
+    "id": "custom-37",
+    "title": "Everybody Wants to Rule the World",
+    "artist": "Tears for Fears",
+    "year": "",
+    "audio": "/audio/Tears%20for%20Fears%20-%20Everybody%20Wants%20to%20Rule%20the%20World.m4a"
+  },
+  {
+    "id": "custom-38",
+    "title": "Mr. Brightside",
+    "artist": "The Killers",
+    "year": "",
+    "audio": "/audio/The%20Killers%20-%20Mr.%20Brightside.m4a"
+  },
+  {
+    "id": "custom-39",
+    "title": "Sorry Papi",
+    "artist": "Topic & Becky G",
+    "year": "",
+    "audio": "/audio/Topic%20%26%20Becky%20G%20-%20Sorry%20Papi.m4a"
+  },
+  {
+    "id": "custom-40",
+    "title": "Ramenez la coupe à la maison",
+    "artist": "Vegedream",
+    "year": "",
+    "audio": "/audio/Vegedream%20-%20Ramenez%20la%20coupe%20%C3%A0%20la%20maison.m4a"
+  },
+  {
+    "id": "custom-41",
+    "title": "All the Small Things",
+    "artist": "blink-182",
+    "year": "",
+    "audio": "/audio/blink-182%20-%20All%20the%20Small%20Things.m4a"
+  }
+]

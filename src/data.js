@@ -54,7 +54,7 @@ export const TEAMS = {
   PAN: { name: 'Panama',         iso: 'pa',     str: 67 }
 };
 
-export const flag = (code) => `https://flagcdn.com/w160/${TEAMS[code]?.iso}.png`;
+export const flag = (code) => `https://flagcdn.com/${TEAMS[code]?.iso}.svg`;
 
 export const GROUPS = {
   A: ['MEX', 'RSA', 'KOR', 'CZE'],

@@ -13,6 +13,7 @@ import MatchCentre from './components/MatchCentre';
 import Bracket from './components/Bracket';
 import Groups from './components/Groups';
 import MusicPlayer from './components/MusicPlayer';
+import Statistics from './components/Statistics';
 
 const TICK_MS = 500;
 const MATCH_DURATION_MS = 3 * 3600000; // 3 hours (including potential extra time)
@@ -193,6 +194,7 @@ export default function App() {
       <MatchCentre snapshot={snapshot} />
       <Bracket snapshot={snapshot} />
       <Groups snapshot={snapshot} />
+      <Statistics snapshot={snapshot} />
       <MusicPlayer />
 
       <footer>

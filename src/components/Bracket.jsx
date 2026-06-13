@@ -201,20 +201,98 @@ function ChampionsBox({ champion }) {
   );
 }
 
-function ConnCol({ count, dir }) {
+function ElbowSvg({ count, winA1, winA2, winB1, winB2, dir }) {
+  const isToR = dir === 'to-r';
+  const H = 836 / count;
+  
+  // Faint lines: center to center
+  const yA_center = H / 4;
+  const yB_center = (3 * H) / 4;
+  const y_out_center = H / 2;
+
+  // Highlighted line source coordinates (exact team row)
+  const yA1 = H / 4 - 1;
+  const yA2 = H / 4 + 27;
+  const yB1 = (3 * H) / 4 - 1;
+  const yB2 = (3 * H) / 4 + 27;
+
+  // Outgoing slots
+  const y_out_top = H / 2 - 1;
+  const y_out_bottom = H / 2 + 27;
+
+  // SVG width = 64
+  const startX = isToR ? 0 : 64;
+  const midX = 32;
+  const endX = isToR ? 64 : 0;
+
+  return (
+    <svg width="100%" height="100%" style={{ display: 'block' }}>
+      {/* Faint default lines */}
+      {!winA1 && !winA2 && (
+        <path 
+          d={`M ${startX} ${yA_center} L ${midX} ${yA_center} L ${midX} ${y_out_center} L ${endX} ${y_out_center}`} 
+          className="elbow-path" 
+        />
+      )}
+      {!winB1 && !winB2 && (
+        <path 
+          d={`M ${startX} ${yB_center} L ${midX} ${yB_center} L ${midX} ${y_out_center} L ${endX} ${y_out_center}`} 
+          className="elbow-path" 
+        />
+      )}
+
+      {/* Highlighted lines */}
+      {winA1 && <path d={`M ${startX} ${yA1} L ${midX} ${yA1} L ${midX} ${y_out_top} L ${endX} ${y_out_top}`} className="elbow-path highlighted" />}
+      {winA2 && <path d={`M ${startX} ${yA2} L ${midX} ${yA2} L ${midX} ${y_out_top} L ${endX} ${y_out_top}`} className="elbow-path highlighted" />}
+      {winB1 && <path d={`M ${startX} ${yB1} L ${midX} ${yB1} L ${midX} ${y_out_bottom} L ${endX} ${y_out_bottom}`} className="elbow-path highlighted" />}
+      {winB2 && <path d={`M ${startX} ${yB2} L ${midX} ${yB2} L ${midX} ${y_out_bottom} L ${endX} ${y_out_bottom}`} className="elbow-path highlighted" />}
+    </svg>
+  );
+}
+
+function ConnCol({ matches, states, teams, dir }) {
+  if (!matches) return null;
+  const count = matches.length / 2;
   return (
     <div className={`b-conn ${dir}`}>
-      {Array.from({ length: count }).map((_, idx) => (
-        <div className="elbow" key={idx} />
-      ))}
+      {Array.from({ length: count }).map((_, idx) => {
+        const matchA = matches[2 * idx];
+        const matchB = matches[2 * idx + 1];
+
+        const winnerCodeA = states[matchA.id]?.status === 'ft' ? states[matchA.id]?.winner : null;
+        const winnerCodeB = states[matchB.id]?.status === 'ft' ? states[matchB.id]?.winner : null;
+
+        const winA1 = winnerCodeA && teams[matchA.id]?.[0] === winnerCodeA;
+        const winA2 = winnerCodeA && teams[matchA.id]?.[1] === winnerCodeA;
+        const winB1 = winnerCodeB && teams[matchB.id]?.[0] === winnerCodeB;
+        const winB2 = winnerCodeB && teams[matchB.id]?.[1] === winnerCodeB;
+
+        return (
+          <div className="elbow" key={idx}>
+            <ElbowSvg 
+              count={count} 
+              winA1={winA1} winA2={winA2} 
+              winB1={winB1} winB2={winB2} 
+              dir={dir} 
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function Straight() {
+function Straight({ match, states }) {
+  const isWinner = !!(match && states[match.id]?.status === 'ft' && states[match.id]?.winner);
   return (
     <div className="b-conn-straight">
-      <i />
+      <svg width="100%" height="100%" viewBox="0 0 46 100" preserveAspectRatio="none" style={{ display: 'block' }}>
+        <path 
+          d="M 0 50 L 46 50" 
+          className={`elbow-path ${isWinner ? 'highlighted' : ''}`}
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
     </div>
   );
 }
@@ -253,16 +331,16 @@ export default function Bracket({ snapshot }) {
       <div className="bracket-scroll">
         <div className="bracket" id="bracket-root">
           <RoundCol matches={ko('R32', 'L')} colCls="b-col-32" label="ROUND OF 32" states={states} teams={teams} />
-          <ConnCol count={4} dir="to-r" />
+          <ConnCol matches={ko('R32', 'L')} states={states} teams={teams} dir="to-r" />
 
           <RoundCol matches={ko('R16', 'L')} colCls="b-col-16" label="ROUND OF 16" states={states} teams={teams} />
-          <ConnCol count={2} dir="to-r" />
+          <ConnCol matches={ko('R16', 'L')} states={states} teams={teams} dir="to-r" />
 
           <RoundCol matches={ko('QF', 'L')} colCls="b-col-qf" label="QUARTER-FINALS" states={states} teams={teams} />
-          <ConnCol count={1} dir="to-r" />
+          <ConnCol matches={ko('QF', 'L')} states={states} teams={teams} dir="to-r" />
 
           <RoundCol matches={ko('SF', 'L')} colCls="b-col-sf" label="SEMI-FINALS" states={states} teams={teams} />
-          <Straight />
+          <Straight match={ko('SF', 'L')[0]} states={states} />
 
           {/* Center Column */}
           <div className="b-col b-col-c">
@@ -271,16 +349,16 @@ export default function Bracket({ snapshot }) {
             <ThirdPlaceCard m={m103} st={states.M103} teams={teams.M103} />
           </div>
 
-          <Straight />
+          <Straight match={ko('SF', 'R')[0]} states={states} />
           <RoundCol matches={ko('SF', 'R')} colCls="b-col-sf" label="SEMI-FINALS" states={states} teams={teams} />
 
-          <ConnCol count={1} dir="to-l" />
+          <ConnCol matches={ko('QF', 'R')} states={states} teams={teams} dir="to-l" />
           <RoundCol matches={ko('QF', 'R')} colCls="b-col-qf" label="QUARTER-FINALS" states={states} teams={teams} />
 
-          <ConnCol count={2} dir="to-l" />
+          <ConnCol matches={ko('R16', 'R')} states={states} teams={teams} dir="to-l" />
           <RoundCol matches={ko('R16', 'R')} colCls="b-col-16" label="ROUND OF 16" states={states} teams={teams} />
 
-          <ConnCol count={4} dir="to-l" />
+          <ConnCol matches={ko('R32', 'R')} states={states} teams={teams} dir="to-l" />
           <RoundCol matches={ko('R32', 'R')} colCls="b-col-32" label="ROUND OF 32" states={states} teams={teams} />
         </div>
       </div>

@@ -36,6 +36,7 @@ export default function Topbar({ now, mode, feedOk, onToggleMode, demoPlaying, o
         <a href="#live">LIVE</a>
         <a href="#bracket">BRACKET</a>
         <a href="#groups">GROUPS</a>
+        <a href="#statistics">STATS</a>
       </div>
       <div className="nav-status">
         <span id="clock">{fmtClock(now)}</span>

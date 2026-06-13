@@ -1,16 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const PLAYLIST = [
-  { id: '2026-1', title: 'Jump', artist: 'J Balvin & Amber Mark', year: 2026, audio: '/audio/jump.m4a' },
-  { id: '2026-2', title: 'Dai Dai', artist: 'Shakira & Burna Boy', year: 2026, audio: '/audio/dai-dai.m4a' },
-  { id: '2026-3', title: 'Lighter', artist: 'Jelly Roll & Carín León', year: 2026, audio: '/audio/lighter.m4a' },
-  { id: '2026-4', title: 'Echo', artist: 'Daddy Yankee & Shenseea', year: 2026, audio: '/audio/echo.m4a' },
-  { id: '2026-5', title: 'Por Ella', artist: 'Los Ángeles Azules & Belinda', year: 2026, audio: '/audio/por-ella.m4a' },
-  { id: '2022-1', title: 'Hayya Hayya', artist: 'Trinidad Cardona, Davido & AISHA', year: 2022, audio: '/audio/hayya-hayya.m4a' },
-  { id: '2022-2', title: 'The World Is Yours To Take', artist: 'Tears for Fears ft. Lil Baby', year: 2022, audio: '/audio/world-is-yours.m4a' },
-  { id: '2010-1', title: 'Waka Waka', artist: 'Shakira', year: 2010, audio: '/audio/waka-waka.m4a' },
-  { id: '2010-2', title: 'Wavin\' Flag', artist: 'K\'naan', year: 2010, audio: '/audio/wavin-flag.m4a' },
-];
+import PLAYLIST from '../tracks.json';
 
 export default function MusicPlayer() {
   const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
