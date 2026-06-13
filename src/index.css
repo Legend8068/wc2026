@@ -1308,7 +1308,7 @@ footer .f-note {
 }
 
 /* ============================== RESPONSIVE ============================== */
-@media (max-width: 1150px) {
+@media (max-width: 850px) {
   .hero {
     flex-direction: column;
     align-items: center;
@@ -1329,12 +1329,41 @@ footer .f-note {
   }
 }
 
+@media (min-width: 851px) and (max-width: 1200px) {
+  .hero {
+    padding-left: clamp(24px, 3vw, 40px);
+    padding-right: clamp(24px, 3vw, 40px);
+    gap: clamp(16px, 2.5vw, 32px);
+    justify-content: space-between;
+  }
+  .hero-brand-year {
+    font-size: clamp(50px, 6vw, 90px);
+  }
+  .interactive-ball-svg {
+    width: clamp(220px, 26vw, 340px);
+    height: clamp(220px, 26vw, 340px);
+  }
+  .hero-stats {
+    width: 290px;
+    transform: none !important;
+  }
+  .stat {
+    padding: 20px 10px;
+  }
+  .stat-num {
+    font-size: clamp(28px, 3vw, 42px);
+  }
+  .stat-num.small {
+    font-size: 18px;
+  }
+}
+
 @media (max-width: 900px) {
   .nav-links { display: none; }
   .lc-score { font-size: 34px; }
 }
 
-@media (min-width: 1151px) {
+@media (min-width: 1201px) {
   .hero-stats {
     transform: translateX(30px);
   }
