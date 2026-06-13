@@ -258,8 +258,8 @@ a { color: inherit; }
   flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: clamp(26px, 5vw, 70px);
-  padding: clamp(50px, 7vw, 90px) clamp(20px, 6vw, 100px) clamp(80px, 9vw, 120px);
+  gap: clamp(16px, 3vw, 70px);
+  padding: clamp(50px, 7vw, 90px) clamp(16px, 4vw, 100px) clamp(80px, 9vw, 120px);
 }
 
 /* tri-colour radial glow — replaces the sunburst */
@@ -294,7 +294,7 @@ a { color: inherit; }
 
 .interactive-ball-wrapper {
   position: relative;
-  flex: 1 1 300px;
+  flex: 1 1 200px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -331,10 +331,11 @@ a { color: inherit; }
 
 .hero-title { 
   position: relative; 
-  flex: none; 
+  flex: 0 1 auto; 
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  min-width: 0;
 }
 .hero-kicker {
   font-family: var(--head);
@@ -356,7 +357,7 @@ a { color: inherit; }
   flex-wrap: wrap;
 }
 
-.hero-stats { position: relative; flex: none; width: min(380px, 100%); }
+.hero-stats { position: relative; flex: 0 1 380px; width: 100%; min-width: 0; }
 .hero-stats-label {
   font-family: var(--head);
   font-weight: 600;
@@ -1344,7 +1345,8 @@ footer .f-note {
     height: clamp(220px, 26vw, 340px);
   }
   .hero-stats {
-    width: 290px;
+    flex: 0 1 290px;
+    width: 100%;
     transform: none !important;
   }
   .stat {
