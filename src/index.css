@@ -255,7 +255,7 @@ a { color: inherit; }
   position: relative;
   overflow: hidden;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: clamp(26px, 5vw, 70px);
