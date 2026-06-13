@@ -35,7 +35,7 @@ const VENUES = [
   // ── Mexico ──
   { id: 'mexico-city', city: 'Mexico City', stadium: 'Estadio Azteca', cc: 'mx', matches: 5, note: 'OPENING MATCH', left: 55.1, top: 77.8 },
   { id: 'guadalajara', city: 'Guadalajara', stadium: 'Estadio Akron', cc: 'mx', matches: 4, left: 51.0, top: 76.1 },
-  { id: 'monterrey', city: 'Monterrey', stadium: 'Estadio BBVA', cc: 'mx', matches: 4, left: 54.0, top: 69.9 },
+  { id: 'monterrey', city: 'Monterrey', stadium: 'Estadio BBVA', cc: 'mx', matches: 4, left: 53.5, top: 71.5 },
 ];
 
 const TOTAL_MATCHES = VENUES.reduce((s, v) => s + v.matches, 0);
@@ -99,7 +99,7 @@ export default function HostMap() {
       </div>
 
       <p className="hm-intro">
-        The first 48-team World Cup spans an entire continent — from Vancouver to Mexico City.
+        The first 48 team World Cup is also the first one to span an entire continent and 3 countries.
         Hover a city to see its stadium and matchday load.
       </p>
 
@@ -107,19 +107,17 @@ export default function HostMap() {
         {/* Three countries as separate, individually-coloured clip layers
             (the source SVG is one merged silhouette, so each country is a
             clipped copy tinted via currentColor). Alaska is a 4th US layer. */}
-        <div className="hm-geo" aria-hidden="true">
-          <MapIcon className="hm-map hm-geo-ca" />
-          <MapIcon className="hm-map hm-geo-us" />
-          <MapIcon className="hm-map hm-geo-ak" />
-          <MapIcon className="hm-map hm-geo-mx" />
-        </div>
+        <svg width="0" height="0" style={{ position: 'absolute' }}>
+          <defs>
+            <linearGradient id="hm-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1a2f48" />
+              <stop offset="100%" stopColor="#0c1520" />
+            </linearGradient>
+          </defs>
+        </svg>
 
-        {/* Transparent, clip-shaped hover targets — one per country region. */}
-        <div className="hm-hit" aria-hidden="true">
-          <span className="hm-hit-area hm-hit-ca" onMouseEnter={ccEnter('ca')} onMouseLeave={ccLeave} />
-          <span className="hm-hit-area hm-hit-mx" onMouseEnter={ccEnter('mx')} onMouseLeave={ccLeave} />
-          <span className="hm-hit-area hm-hit-us" onMouseEnter={ccEnter('us')} onMouseLeave={ccLeave} />
-          <span className="hm-hit-area hm-hit-ak" onMouseEnter={ccEnter('us')} onMouseLeave={ccLeave} />
+        <div className="hm-geo" aria-hidden="true">
+          <MapIcon className="hm-map" />
         </div>
 
         <div className="hm-markers">

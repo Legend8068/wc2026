@@ -94,51 +94,52 @@ export default function BrandText({ text, className = "", style = {}, useBallFor
                 </g>
 
                 {/* Confetti & Branding Patterns */}
-                <g strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" filter="drop-shadow(0px 1.5px 1.5px rgba(0,0,0,0.15))">
-                  {/* Top fountain */}
-                  <path d="M48,30 C45,24 40,20 35,22" stroke="#a31f47" className="confetti-wiggle" />
-                  <path d="M52,30 C55,24 60,20 65,22" stroke="#298888" className="confetti-wiggle" />
-                  <path d="M50,28 C50,20 55,14 62,12" stroke="#4a256a" className="confetti-wiggle" />
-                  <path d="M46,26 C40,20 42,10 48,10" stroke="#d1a74d" className="confetti-wiggle" />
+                <g strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" filter="drop-shadow(0px 1.5px 1.5px rgba(0,0,0,0.15))">
+                  {/* Top Left */}
+                  <path d="M30,30 L20,20 M25,15 L15,25" stroke="#a31f47" className="confetti-shoot-tl" />
+                  <polygon points="25,35 30,40 20,40" fill="#298888" stroke="none" className="confetti-shoot-tl" />
+                  <circle cx="35" cy="25" r="3" fill="#d1a74d" stroke="none" className="confetti-shoot-tl" style={{animationDelay: '0.2s'}} />
                   
-                  <polygon points="38,12 43,8 44,16" fill="none" stroke="#a31f47" className="confetti-spin" />
-                  <polygon points="62,14 68,18 58,18" fill="none" stroke="#298888" className="confetti-spin" />
-                  <circle cx="56" cy="8" r="2.5" fill="none" stroke="#4a256a" className="confetti-pulse" />
-                  <circle cx="38" cy="6" r="2" fill="none" stroke="#d1a74d" className="confetti-pulse" />
-
-                  {/* Left */}
-                  <path d="M38,40 C32,40 28,35 30,30" stroke="#a31f47" className="confetti-wiggle" />
-                  <polygon points="26,42 32,48 22,48" fill="none" stroke="#298888" className="confetti-spin" />
-                  <polygon points="35,52 30,56 38,56" fill="none" stroke="#4a256a" className="confetti-spin" />
-                  <path d="M26,54 C32,58 36,54 38,60" stroke="#e06b26" className="confetti-wiggle" />
-                  <circle cx="24" cy="34" r="2" fill="none" stroke="#d1a74d" className="confetti-pulse" />
-
-                  {/* Right */}
-                  <path d="M62,40 C68,40 72,35 70,30" stroke="#4a256a" className="confetti-wiggle" />
-                  <polygon points="74,42 68,48 78,48" fill="none" stroke="#a31f47" className="confetti-spin" />
-                  <polygon points="65,52 70,56 62,56" fill="none" stroke="#298888" className="confetti-spin" />
-                  <path d="M74,54 C68,58 64,54 62,60" stroke="#8db544" className="confetti-wiggle" />
-                  <circle cx="76" cy="34" r="2.5" fill="none" stroke="#d1a74d" className="confetti-pulse" />
-
-                  {/* Bottom */}
-                  <path d="M45,72 C45,78 40,82 35,78" stroke="#298888" className="confetti-wiggle" />
-                  <path d="M55,72 C55,78 60,82 65,78" stroke="#a31f47" className="confetti-wiggle" />
-                  <polygon points="50,76 55,82 45,82" fill="none" stroke="#4a256a" className="confetti-spin" />
-                  <circle cx="40" cy="84" r="2" fill="none" stroke="#d1a74d" className="confetti-pulse" />
-                  <circle cx="60" cy="84" r="2" fill="none" stroke="#298888" className="confetti-pulse" />
-                  <polygon points="32,74 36,70 34,78" fill="none" stroke="#a31f47" className="confetti-spin" />
-                  <polygon points="68,74 64,70 66,78" fill="none" stroke="#d1a74d" className="confetti-spin" />
+                  {/* Top Right */}
+                  <path d="M70,30 L80,20 M75,15 L85,25" stroke="#298888" className="confetti-shoot-tr" />
+                  <polygon points="75,35 70,40 80,40" fill="#a31f47" stroke="none" className="confetti-shoot-tr" />
+                  <circle cx="65" cy="25" r="3" fill="#4a256a" stroke="none" className="confetti-shoot-tr" style={{animationDelay: '0.1s'}} />
+                  
+                  {/* Bottom Left */}
+                  <path d="M30,70 L20,80 M25,85 L15,75" stroke="#4a256a" className="confetti-shoot-bl" />
+                  <polygon points="25,65 30,60 20,60" fill="#e06b26" stroke="none" className="confetti-shoot-bl" style={{animationDelay: '0.3s'}} />
+                  <circle cx="35" cy="75" r="3" fill="#d1a74d" stroke="none" className="confetti-shoot-bl" />
+                  
+                  {/* Bottom Right */}
+                  <path d="M70,70 L80,80 M75,85 L85,75" stroke="#e06b26" className="confetti-shoot-br" />
+                  <polygon points="75,65 70,60 80,60" fill="#298888" stroke="none" className="confetti-shoot-br" style={{animationDelay: '0.15s'}} />
+                  <circle cx="65" cy="75" r="3" fill="#a31f47" stroke="none" className="confetti-shoot-br" />
+                  
+                  {/* Popping center accents */}
+                  <circle cx="50" cy="15" r="2.5" fill="#d1a74d" stroke="none" className="confetti-pop" />
+                  <circle cx="50" cy="85" r="2.5" fill="#d1a74d" stroke="none" className="confetti-pop" style={{animationDelay: '0.2s'}} />
+                  <circle cx="15" cy="50" r="2.5" fill="#4a256a" stroke="none" className="confetti-pop" style={{animationDelay: '0.4s'}} />
+                  <circle cx="85" cy="50" r="2.5" fill="#298888" stroke="none" className="confetti-pop" style={{animationDelay: '0.1s'}} />
                 </g>
 
                 {/* World Cup Trophy */}
-                <g fill="#c49a3f" transform="translate(50, 50) scale(1.4) translate(-50, -50)" filter="drop-shadow(0px 2px 2px rgba(0,0,0,0.2))">
-                  {/* Base */}
-                  <path d="M46.5 64 h7 l1 3 h-9 z" />
-                  <path d="M46 60 h8 l.5 3 h-9 z" />
-                  {/* Figures holding globe */}
-                  <path d="M46 60 c-1.5-6 -4-10 -4-15 c0-5 3-4 4-2 c0 0 2-4 6-2 c1-1 4-2 4 2 c0 5 -2.5 9 -4 15 z" />
+                <g transform="translate(50, 48) scale(1.6) translate(-50, -50)" filter="drop-shadow(0px 3px 4px rgba(0,0,0,0.3))">
+                  {/* Base Layers */}
+                  <path d="M44.5 68 L43 72 H57 L55.5 68 Z" fill="#c29b38" />
+                  <path d="M45 66 H55 L55.5 68 H44.5 Z" fill="#184a28" />
+                  <path d="M45.5 62 H54.5 L55 66 H45 Z" fill="#e8c253" />
+                  <path d="M46 60 H54 L54.5 62 H45.5 Z" fill="#184a28" />
+                  <path d="M46.5 56 H53.5 L54 60 H46 Z" fill="#e8c253" />
+                  
+                  {/* Left Figure */}
+                  <path d="M46.5 56 C 44 48, 41 40, 45 31 C 48 29, 49 32, 48 35 C 47 39, 49 46, 50 50 C 49 53, 47 55, 46.5 56 Z" fill="#d9b141" />
+                  
+                  {/* Right Figure */}
+                  <path d="M53.5 56 C 56 48, 59 40, 55 31 C 52 29, 51 32, 52 35 C 53 39, 51 46, 50 50 C 51 53, 53 55, 53.5 56 Z" fill="#ebd170" />
+                  
                   {/* Globe */}
-                  <circle cx="50" cy="40" r="4.5" />
+                  <circle cx="50" cy="28" r="6" fill="#fce588" />
+                  <path d="M45.5 25 Q 48 22 51 26 T 55 24 M 46 30 Q 50 28 53 32" stroke="#d9b141" strokeWidth="1.2" strokeLinecap="round" fill="none" />
                 </g>
                 
                 <rect x="0" y="0" width="100" height="100" rx="20" ry="20" fill="none" stroke="#d5d0c5" strokeWidth="2.5" />

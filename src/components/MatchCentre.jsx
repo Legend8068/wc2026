@@ -87,16 +87,14 @@ export default function MatchCentre({ snapshot }) {
       const st = states[i.fx.id];
       return st && st.status === 'ft';
     })
-    .sort((a, b) => b.fx.ts - a.fx.ts) // newest completed matches first
-    .slice(0, 3);
+    .sort((a, b) => b.fx.ts - a.fx.ts); // newest completed matches first
 
   const upcomingMatches = allPlayable
     .filter(i => {
       const st = states[i.fx.id];
       return st && st.status === 'pre';
     })
-    .sort((a, b) => a.fx.ts - b.fx.ts) // soonest upcoming matches first
-    .slice(0, 3);
+    .sort((a, b) => a.fx.ts - b.fx.ts); // soonest upcoming matches first
 
   // Determine which matches to show based on selected tab
   let cards = [];

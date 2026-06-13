@@ -1,40 +1,47 @@
-.brand-text {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
+import re
+
+with open('src/components/BrandText.css', 'r') as f:
+    content = f.read()
+
+old_css = """/* Confetti Animations upon hover of the ball */
+.brand-char-ball:hover .confetti-wiggle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: confetti-wiggle 1.2s ease-in-out infinite;
 }
 
-.brand-char {
-  height: 1em;
-  fill: currentColor;
-  margin-right: 0.08em;
-  display: inline-block;
-  flex-shrink: 0;
+.brand-char-ball:hover .confetti-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: confetti-spin 2s linear infinite;
 }
 
-.brand-char:last-child {
-  margin-right: 0;
+.brand-char-ball:hover .confetti-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: confetti-pulse 1.4s ease-in-out infinite;
 }
 
-.brand-char.space {
-  width: 0.4em;
-  margin-right: 0;
+@keyframes confetti-wiggle {
+  0% { transform: rotate(0deg) translate(0, 0); }
+  25% { transform: rotate(8deg) translate(1px, -1px); }
+  75% { transform: rotate(-8deg) translate(-1px, 1px); }
+  100% { transform: rotate(0deg) translate(0, 0); }
 }
 
-.brand-char.fallback {
-  font-family: var(--font-display);
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+@keyframes confetti-spin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.25); }
+  100% { transform: rotate(360deg) scale(1); }
 }
 
-/* Confetti Celebration Animations upon hover of the ball */
-.confetti-shoot-tl, .confetti-shoot-tr, .confetti-shoot-bl, .confetti-shoot-br, .confetti-pop {
-  opacity: 0;
-}
+@keyframes confetti-pulse {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.4) translate(0.5px, 0.5px); fill-opacity: 0.85; }
+  100% { transform: scale(1) translate(0, 0); }
+}"""
 
+new_css = """/* Confetti Celebration Animations upon hover of the ball */
 .brand-char-ball:hover .confetti-shoot-tl {
   transform-box: fill-box;
   transform-origin: center;
@@ -85,5 +92,9 @@
   0% { transform: scale(0); opacity: 0; }
   20% { transform: scale(1.8); opacity: 1; }
   100% { transform: scale(1) translateY(-20px); opacity: 0; }
-}
+}"""
 
+content = content.replace(old_css, new_css)
+
+with open('src/components/BrandText.css', 'w') as f:
+    f.write(content)

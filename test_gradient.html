@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<body>
+<style>
+  .hero { color: white; fill: currentColor; width: 100px; }
+  .host { fill: url(#grad); width: 100px; }
+</style>
+<svg width="0" height="0">
+  <defs>
+    <linearGradient id="grad">
+      <stop offset="0%" stop-color="red" />
+      <stop offset="100%" stop-color="blue" />
+    </linearGradient>
+  </defs>
+</svg>
+
+<svg class="hero" viewBox="0 0 10 10">
+  <path d="M0,0 h10 v10 h-10 Z" />
+</svg>
+
+<svg class="host" viewBox="0 0 10 10">
+  <path d="M0,0 h10 v10 h-10 Z" />
+</svg>
+</body>
+</html>

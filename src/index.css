@@ -158,7 +158,7 @@ a { color: inherit; }
   gap: 8px;
   font-family: var(--head);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.1em;
   color: var(--white);
   background: rgba(226, 0, 26, 0.15);
@@ -192,7 +192,7 @@ a { color: inherit; }
 .demo-ctrl-btn {
   font-family: var(--head);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.06em;
   color: var(--white);
   background: rgba(245, 197, 66, 0.1);
@@ -242,11 +242,11 @@ a { color: inherit; }
 .ticker-item .t-live {
   color: var(--red-light);
   font-weight: 800;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.1em;
   animation: blink 1.4s ease-in-out infinite;
 }
-.ticker-item .t-time { color: var(--muted); font-size: 12px; }
+.ticker-item .t-time { color: var(--muted); font-size: 14px; }
 @keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
@@ -357,6 +357,23 @@ a { color: inherit; }
   flex-wrap: wrap;
 }
 
+.hero-map {
+  margin-top: 32px;
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  opacity: 1;
+  filter: drop-shadow(0 8px 24px rgba(51, 102, 255, 0.25));
+  transition: filter 0.3s ease;
+  color: #ffffff;
+  fill: currentColor;
+}
+
+.hero-map:hover {
+  opacity: 1;
+  filter: drop-shadow(0 12px 32px rgba(51, 102, 255, 0.4));
+}
+
 .hero-stats { position: relative; flex: 0 1 380px; width: 100%; min-width: 0; }
 .hero-stats-label {
   font-family: var(--head);
@@ -439,7 +456,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   color: var(--white);
 }
 .section-brand-sub {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.15em;
   color: var(--muted);
@@ -501,11 +518,39 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 }
 
 .live-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  display: flex;
+  overflow-x: auto;
   gap: 20px;
+  padding-bottom: 24px; /* More space for the prominent scrollbar */
+  -webkit-overflow-scrolling: touch;
 }
+
+/* Custom WebKit Scrollbar - visually appealing "progress bar" style */
+.live-strip::-webkit-scrollbar {
+  height: 12px; /* Slightly thicker */
+  background-color: transparent;
+}
+.live-strip::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+.live-strip::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, var(--blue), var(--blue-dark));
+  border-radius: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.3); /* Actual solid border to ensure it pops out from the track */
+  background-clip: padding-box;
+}
+.live-strip::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, var(--blue-light, #6688ff), var(--blue));
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  background-clip: padding-box;
+}
+
 .live-card {
+  flex: 0 0 calc(33.333% - 13.33px);
+  min-width: 290px;
   position: relative;
   background: var(--paper);
   color: var(--ink);
@@ -541,7 +586,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   text-align: center;
   font-family: var(--head);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.08em;
   color: var(--muted-warm);
   padding: 10px 0;
@@ -623,7 +668,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .mc-timeline-middle {
   font-family: var(--head);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--white);
   background: var(--ink);
   padding: 3px 8px;
@@ -648,7 +693,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 }
 .mc-event-icon {
   flex: none;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 /* Match Statistics Bars */
@@ -668,11 +713,11 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   align-items: center;
   font-family: var(--head);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink);
 }
 .mc-stat-name {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--muted-warm);
@@ -758,7 +803,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 }
 @media (min-width: 640px) {
   .lcv-name-bar {
-    font-size: 15px;
+    font-size: 20px;
     padding: 12px;
   }
 }
@@ -818,7 +863,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .lcv-label {
   font-family: var(--head);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink);
@@ -827,7 +872,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .lcv-time {
   font-family: var(--body);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--red);
   animation: blink 1.4s ease-in-out infinite;
 }
@@ -854,7 +899,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   font-family: var(--head);
   font-weight: 500;
   letter-spacing: 0.08em;
-  font-size: 15px;
+  font-size: 20px;
   color: var(--muted);
   padding: 18px 0 6px;
 }
@@ -901,7 +946,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   font-family: var(--head);
   font-weight: 700;
   letter-spacing: 0.08em;
-  font-size: 15px;
+  font-size: 20px;
   color: var(--muted);
 }
 
@@ -942,7 +987,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   padding: 0 12px;
   font-family: var(--head);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.02em;
   color: var(--white);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
@@ -978,7 +1023,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   min-width: 0;
   font-family: var(--body);
   font-weight: 700;
-  font-size: 15px;
+  font-size: 20px;
   color: var(--ink);
   border-bottom: none;
   line-height: 1.3;
@@ -991,7 +1036,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   color: var(--muted-warm);
   font-family: var(--head);
   font-weight: 500;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.08em;
   padding-top: 4px;
 }
@@ -1006,11 +1051,11 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   justify-content: center;
   font-family: var(--head);
   font-weight: 700;
-  font-size: 15px;
+  font-size: 20px;
   color: var(--ink);
   background: var(--paper-dim);
 }
-.ko-score .pens { font-size: 9px; color: var(--red-dark); margin-left: 2px; }
+.ko-score .pens { font-size: 13px; color: var(--red-dark); margin-left: 2px; }
 .ko-row.winner .ko-name { font-weight: 800; }
 .ko-row.winner .ko-score { background: var(--gold-soft); color: var(--ink); }
 .ko-row.loser { opacity: 0.45; }
@@ -1086,14 +1131,14 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   letter-spacing: 0.08em;
   font-size: 13px;
   color: var(--muted);
-  margin-top: 4px;
+  margin-top: 6px;
 }
 .final-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
 .final-body .ko-row { gap: 12px; }
 .final-body .seal, .final-body img.flagchip { width: 34px; height: 24px; border-radius: 8px; }
 .final-body .seal { width: 30px; height: 30px; border-radius: 10px; }
 .final-body .ko-name { font-size: 18px; height: 26px; }
-.final-body .ko-name.placeholder { font-size: 12px; padding-top: 6px; }
+.final-body .ko-name.placeholder { font-size: 14px; padding-top: 6px; }
 .final-body .ko-score { width: 38px; height: 32px; font-size: 18px; border-radius: var(--radius-sm); }
 .final-vs {
   text-align: center;
@@ -1120,7 +1165,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   font-family: var(--head);
   font-weight: 600;
   letter-spacing: 0.1em;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
   margin-bottom: 9px;
 }
@@ -1131,11 +1176,11 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   justify-content: center;
   font-family: var(--body);
   font-weight: 700;
-  font-size: 15px;
+  font-size: 20px;
   color: var(--white);
 }
 .third-card .tp-name { flex: 1; border-bottom: none; min-height: 18px; text-align: center; white-space: nowrap; overflow: hidden; }
-.third-card .tp-name.placeholder { color: rgba(255, 255, 255, 0.3); font-size: 11px; font-family: var(--head); letter-spacing: 0.08em; }
+.third-card .tp-name.placeholder { color: rgba(255, 255, 255, 0.3); font-size: 13px; font-family: var(--head); letter-spacing: 0.08em; }
 .third-card .tp-score {
   width: 26px;
   height: 22px;
@@ -1195,7 +1240,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   color: var(--muted);
   font-family: var(--head);
   font-weight: 600;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.12em;
   display: flex;
   align-items: center;
@@ -1215,7 +1260,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   padding-bottom: 8px;
   font-family: var(--head);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.04em;
   color: var(--muted-warm);
   border-bottom: 2px solid var(--ink);
@@ -1280,7 +1325,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .fx-label {
   font-family: var(--head);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.12em;
   color: var(--blue);
   margin: 16px 0 10px;
@@ -1299,15 +1344,15 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .fx-row.is-live { background: rgba(226, 0, 26, 0.06); box-shadow: inset 3px 0 0 var(--red); padding-left: 8px; border-radius: 0 8px 8px 0; }
 .fx-when { width: 46px; flex: none; line-height: 1.1; }
 .fx-when .d { font-family: var(--head); font-weight: 700; font-size: 13px; color: var(--blue); }
-.fx-when .t { font-family: var(--head); font-weight: 500; font-size: 12px; color: var(--muted-warm); }
+.fx-when .t { font-family: var(--head); font-weight: 500; font-size: 14px; color: var(--muted-warm); }
 .fx-when .live-min {
   font-family: var(--head);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--red);
   animation: blink 1.4s ease-in-out infinite;
 }
-.fx-teams { flex: 1; font-family: var(--body); font-weight: 700; font-size: 15px; color: var(--ink); min-width: 0; }
+.fx-teams { flex: 1; font-family: var(--body); font-weight: 700; font-size: 20px; color: var(--ink); min-width: 0; }
 .fx-teams .v { color: var(--muted-warm); font-weight: 500; }
 .fx-score { display: flex; gap: 5px; flex: none; }
 .fx-score b {
@@ -1372,7 +1417,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .ov-lbl {
   font-family: var(--head);
   font-weight: 600;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.06em;
   color: var(--muted);
   white-space: nowrap;
@@ -1592,7 +1637,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .podium-team {
   font-family: var(--body);
   font-weight: 500;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   margin-bottom: 12px;
   text-align: center;
@@ -1639,7 +1684,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .podium-pos {
   font-family: var(--head);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.1em;
   color: var(--muted);
 }
@@ -1704,7 +1749,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .cmp-team {
   font-family: var(--body);
   font-weight: 500;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted-warm);
   flex: none;
 }
@@ -1765,7 +1810,12 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .cw-card--yellow { border-color: rgba(255, 171, 0, 0.15); }
 .cw-card--red { border-color: rgba(239, 83, 80, 0.15); background: rgba(239, 83, 80, 0.03); }
 
-.cw-card-visual { position: relative; margin-bottom: 2px; }
+.cw-card-visual { 
+  display: flex;
+  gap: 6px;
+  position: relative; 
+  margin-bottom: 4px; 
+}
 .cw-card-shape {
   width: 28px;
   height: 38px;
@@ -1800,7 +1850,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .cw-name {
   font-family: var(--body);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink);
   line-height: 1.3;
 }
@@ -1819,10 +1869,10 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .cw-count {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 6px;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
 }
 .cw-count--y { color: #d49a00; }
 .cw-count--r { color: #c62828; }
@@ -1860,7 +1910,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   color: var(--muted);
   font-family: var(--head);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.04em;
   white-space: nowrap;
   cursor: pointer;
@@ -1990,7 +2040,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .tr-sub {
   font-family: var(--body);
   font-weight: 500;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -2015,7 +2065,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .dual-bar-label {
   font-family: var(--head);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.08em;
 }
 .dual-bar-label--atk { color: var(--green); }
@@ -2088,7 +2138,7 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 .dual-bar-name {
   font-family: var(--body);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--white);
   white-space: nowrap;
   overflow: hidden;
@@ -2140,7 +2190,7 @@ footer .f-brand span { color: var(--gold); }
 footer .f-note {
   font-family: var(--body);
   font-weight: 500;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.04em;
   color: var(--muted);
   text-align: right;
@@ -2298,7 +2348,7 @@ footer .f-note {
 }
 .mp-artist {
   font-family: var(--body);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -2385,10 +2435,6 @@ footer .f-note {
   /* country regions, in % of the map box (viewBox 2816x1536).
      Boundaries follow the US–Canada (49th parallel + Great Lakes) and
      US–Mexico borders, calibrated against the venue markers. */
-  --clip-ca: polygon(22% -5%, 105% -5%, 105% 46%, 82% 46%, 78% 47%, 74% 49.5%, 70.5% 45%, 68% 41.5%, 36% 41.5%, 22% 41.5%);
-  --clip-us: polygon(33% 41.5%, 68% 41.5%, 70.5% 45%, 74% 49.5%, 78% 47%, 82% 46%, 105% 46%, 105% 68%, 60% 68%, 57% 67.5%, 53% 66%, 48% 64%, 42% 62%, 33% 62%);
-  --clip-ak: polygon(0% 16%, 22% 16%, 22% 47%, 0% 47%);
-  --clip-mx: polygon(36% 61%, 42% 62%, 48% 64%, 53% 66%, 57% 67.5%, 62% 69%, 82% 80%, 82% 115%, 14% 115%, 14% 78%, 30% 64%);
 }
 
 /* hero map doubles as a jump-to-venues control */
@@ -2423,6 +2469,12 @@ footer .f-note {
   width: 100%;
   height: 100%;
   display: block;
+  fill: url(#hm-grad);
+  filter: drop-shadow(0 0 20px rgba(0, 243, 255, 0.2)) drop-shadow(0 10px 40px rgba(51, 102, 255, 0.2));
+  transition: filter 0.4s ease-out;
+}
+.hm-wrap:hover .hm-map {
+  filter: drop-shadow(0 0 30px rgba(0, 243, 255, 0.4)) drop-shadow(0 15px 50px rgba(51, 102, 255, 0.6));
 }
 
 /* ── Country layers ───────────────────────────────────────────────
@@ -2434,33 +2486,10 @@ footer .f-note {
   filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
   transition: color 0.4s ease, filter 0.4s ease;
 }
-.hm-geo-us { color: var(--hm-us); clip-path: var(--clip-us); }
-.hm-geo-ak { color: var(--hm-us); clip-path: var(--clip-ak); }
-.hm-geo-ca { color: var(--hm-ca); clip-path: var(--clip-ca); }
-.hm-geo-mx { color: var(--hm-mx); clip-path: var(--clip-mx); }
 
 /* Hover → that country lights up to a lighter shade + coloured glow. */
-.hm-wrap.hm-hover-us .hm-geo-us,
-.hm-wrap.hm-hover-us .hm-geo-ak {
-  color: var(--hm-us-hi);
-  filter: drop-shadow(0 0 18px rgba(95, 141, 224, 0.75)) drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
-}
-.hm-wrap.hm-hover-ca .hm-geo-ca {
-  color: var(--hm-ca-hi);
-  filter: drop-shadow(0 0 18px rgba(232, 80, 95, 0.75)) drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
-}
-.hm-wrap.hm-hover-mx .hm-geo-mx {
-  color: var(--hm-mx-hi);
-  filter: drop-shadow(0 0 18px rgba(52, 217, 138, 0.75)) drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
-}
 
 /* Transparent hover targets shaped to each country region. */
-.hm-hit { position: absolute; inset: 0; z-index: 2; }
-.hm-hit-area { position: absolute; inset: 0; display: block; cursor: pointer; }
-.hm-hit-us { clip-path: var(--clip-us); }
-.hm-hit-ak { clip-path: var(--clip-ak); }
-.hm-hit-ca { clip-path: var(--clip-ca); }
-.hm-hit-mx { clip-path: var(--clip-mx); }
 
 .hm-markers { position: absolute; inset: 0; z-index: 3; }
 
@@ -2545,11 +2574,11 @@ footer .f-note {
   --ty: 8px;
   --sc: 0.95;
   width: max-content;
-  max-width: 220px;
+  max-width: 280px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 11px 14px;
+  gap: 6px;
+  padding: 16px 20px;
   background: var(--paper);
   color: var(--ink);
   border-radius: var(--radius-sm);
@@ -2585,38 +2614,38 @@ footer .f-note {
   align-self: flex-start;
   font-family: var(--head);
   font-weight: 700;
-  font-size: 9px;
+  font-size: 13px;
   letter-spacing: 0.14em;
   color: #fff;
   background: var(--c);
-  padding: 2px 7px;
+  padding: 3px 9px;
   border-radius: 5px;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 .hm-stadium {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 15px;
+  font-size: 20px;
   line-height: 1.15;
   color: var(--ink);
 }
 .hm-city {
   font-family: var(--head);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--slate);
 }
 .hm-meta {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 6px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--muted-warm);
 }
 .hm-meta strong { color: var(--ink); }
-.hm-flagdot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.hm-flagdot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
 .hm-sep { opacity: 0.5; margin: 0 2px; }
 
 /* country legend */
@@ -2644,8 +2673,8 @@ footer .f-note {
 .hm-leg--total .hm-leg-count { color: var(--gold); font-weight: 700; }
 
 @media (max-width: 560px) {
-  .hm-card { max-width: 168px; padding: 9px 11px; }
-  .hm-stadium { font-size: 13px; }
+  .hm-card { max-width: 220px; padding: 12px 14px; }
+  .hm-stadium { font-size: 17px; }
   .hm-dot { width: 26px; height: 26px; }
 }
 
