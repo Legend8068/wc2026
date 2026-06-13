@@ -14,6 +14,7 @@ import Bracket from './components/Bracket';
 import Groups from './components/Groups';
 import MusicPlayer from './components/MusicPlayer';
 import Statistics from './components/Statistics';
+import HostMap from './components/HostMap';
 
 const TICK_MS = 500;
 const MATCH_DURATION_MS = 3 * 3600000; // 3 hours (including potential extra time)
@@ -195,6 +196,7 @@ export default function App() {
       <Bracket snapshot={snapshot} />
       <Groups snapshot={snapshot} />
       <Statistics snapshot={snapshot} />
+      <HostMap />
       <MusicPlayer />
 
       <footer>
