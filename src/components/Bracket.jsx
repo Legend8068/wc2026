@@ -1,0 +1,289 @@
+import React, { useState, useEffect, useRef } from 'react';
+import D from '../data';
+import RevealSection from './RevealSection';
+import BrandText from './BrandText';
+
+function ScoreDisplay({ value }) {
+  const [pop, setPop] = useState(false);
+  const prevVal = useRef(value);
+
+  useEffect(() => {
+    if (value !== prevVal.current && value !== null && prevVal.current !== null) {
+      setPop(true);
+      const t = setTimeout(() => setPop(false), 700);
+      prevVal.current = value;
+      return () => clearTimeout(t);
+    }
+    prevVal.current = value;
+  }, [value]);
+
+  return <span className={pop ? 'pop' : ''}>{value !== null ? value : ''}</span>;
+}
+
+function KoCard({ m, st, teams }) {
+  const codeA = teams?.[0];
+  const codeB = teams?.[1];
+
+  const live = st && (st.status === 'live' || st.status === 'ht');
+  const isFt = st && st.status === 'ft' && st.winner;
+
+  const renderRow = (code, side) => {
+    const isWinner = isFt && st.winner === code;
+    const isLoser = isFt && st.winner !== code;
+    const nameCls = code ? 'ko-name' : 'ko-name placeholder';
+    const rowCls = `ko-row ${isWinner ? 'winner' : ''} ${isLoser ? 'loser' : ''}`;
+
+    const scoreVal = st && st.sa !== null ? (side === 0 ? st.sa : st.sb) : null;
+    const pensVal = st && st.pensA !== null ? (side === 0 ? st.pensA : st.pensB) : null;
+
+    return (
+      <div className={rowCls} data-side={side}>
+        {code ? (
+          <img className="flagchip" src={D.flag(code)} alt="" />
+        ) : (
+          <span className="seal" />
+        )}
+        <span className={nameCls}>
+          {code ? D.TEAMS[code].name : D.srcLabel(m.src[side])}
+        </span>
+        <span className="ko-score">
+          {scoreVal !== null ? (
+            <>
+              <ScoreDisplay value={scoreVal} />
+              {pensVal !== null && (
+                <span className="pens">({pensVal})</span>
+              )}
+            </>
+          ) : (
+            ''
+          )}
+        </span>
+      </div>
+    );
+  };
+
+  return (
+    <div className={`ko-card ${live ? 'is-live' : ''}`} id={m.id}>
+      <div className="ko-head">
+        <span className="kh-l">{m.round === 'SF' ? 'SEMI · ' : ''}{m.id}</span>
+        {live ? (
+          <span className="live-tag">● LIVE {st.status === 'ht' ? 'HT' : `${st.minute}′`}</span>
+        ) : (
+          <span className="kh-r">{m.d} · {m.t}</span>
+        )}
+      </div>
+      <div className="ko-body">
+        {renderRow(codeA, 0)}
+        {renderRow(codeB, 1)}
+      </div>
+    </div>
+  );
+}
+
+function FinalCard({ m, st, teams }) {
+  const codeA = teams?.[0];
+  const codeB = teams?.[1];
+
+  const live = st && (st.status === 'live' || st.status === 'ht');
+  const isFt = st && st.status === 'ft' && st.winner;
+
+  const renderRow = (code, side) => {
+    const isWinner = isFt && st.winner === code;
+    const isLoser = isFt && st.winner !== code;
+    const nameCls = code ? 'ko-name' : 'ko-name placeholder';
+    const rowCls = `ko-row ${isWinner ? 'winner' : ''} ${isLoser ? 'loser' : ''}`;
+
+    const scoreVal = st && st.sa !== null ? (side === 0 ? st.sa : st.sb) : null;
+    const pensVal = st && st.pensA !== null ? (side === 0 ? st.pensA : st.pensB) : null;
+
+    return (
+      <div className={rowCls} data-side={side}>
+        {code ? (
+          <img className="flagchip" src={D.flag(code)} alt="" />
+        ) : (
+          <span className="seal" />
+        )}
+        <span className={nameCls}>
+          {code ? D.TEAMS[code].name : D.srcLabel(m.src[side])}
+        </span>
+        <span className="ko-score">
+          {scoreVal !== null ? (
+            <>
+              <ScoreDisplay value={scoreVal} />
+              {pensVal !== null && (
+                <span className="pens">({pensVal})</span>
+              )}
+            </>
+          ) : (
+            ''
+          )}
+        </span>
+      </div>
+    );
+  };
+
+  return (
+    <div className={`final-card ${live ? 'is-live' : ''}`} id={m.id}>
+      <div className="final-head">
+        <div className="f-title">FINAL</div>
+        {live ? (
+          <div className="f-sub">
+            <span className="live-tag">● LIVE {st.status === 'ht' ? 'HT' : `${st.minute}′`}</span>
+          </div>
+        ) : (
+          <div className="f-sub" id="final-sub">
+            M104 · 20 JUL · NEW YORK / NJ
+          </div>
+        )}
+      </div>
+      <div className="final-body">
+        {renderRow(codeA, 0)}
+        <div className="final-vs">VS</div>
+        {renderRow(codeB, 1)}
+      </div>
+    </div>
+  );
+}
+
+function ThirdPlaceCard({ m, st, teams }) {
+  const codeA = teams?.[0];
+  const codeB = teams?.[1];
+
+  const scoreA = st && st.sa !== null ? st.sa : null;
+  const scoreB = st && st.sb !== null ? st.sb : null;
+
+  return (
+    <div className="third-card" id={m.id}>
+      <div className="tp-head">THIRD PLACE · M103 · 19 JUL</div>
+      <div className="tp-row">
+        <span className={codeA ? 'tp-name' : 'tp-name placeholder'} data-side="0">
+          {codeA ? D.TEAMS[codeA].name : D.srcLabel(m.src[0])}
+        </span>
+        <span className="tp-score" data-side="0">
+          {scoreA !== null ? <ScoreDisplay value={scoreA} /> : ''}
+        </span>
+        <span className="tp-v">V</span>
+        <span className="tp-score" data-side="1">
+          {scoreB !== null ? <ScoreDisplay value={scoreB} /> : ''}
+        </span>
+        <span className={codeB ? 'tp-name' : 'tp-name placeholder'} data-side="1">
+          {codeB ? D.TEAMS[codeB].name : D.srcLabel(m.src[1])}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ChampionsBox({ champion }) {
+  const isCrowned = !!champion;
+  const team = champion ? D.TEAMS[champion] : null;
+
+  return (
+    <div className={`b-champ ${isCrowned ? 'crowned' : ''}`} id="champ-box">
+      <svg className="trophy" width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="#e8b84b" strokeWidth="1.3">
+        <path d="M7 4h10v4a5 5 0 0 1-10 0V4z"></path>
+        <path d="M7 5H4v2a3 3 0 0 0 3 3"></path>
+        <path d="M17 5h3v2a3 3 0 0 1-3 3"></path>
+        <path d="M12 13v3"></path>
+        <path d="M9.5 20h5"></path>
+        <path d="M10 16.5h4V20h-4z"></path>
+      </svg>
+      <div className="b-champ-label">WORLD CHAMPIONS</div>
+      <div className="b-champ-team">
+        {champion && (
+          <>
+            <img src={D.flag(champion)} alt="" />
+            <span>{team?.name}</span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ConnCol({ count, dir }) {
+  return (
+    <div className={`b-conn ${dir}`}>
+      {Array.from({ length: count }).map((_, idx) => (
+        <div className="elbow" key={idx} />
+      ))}
+    </div>
+  );
+}
+
+function Straight() {
+  return (
+    <div className="b-conn-straight">
+      <i />
+    </div>
+  );
+}
+
+function RoundCol({ matches, colCls, label, states, teams }) {
+  const isCenterRound = matches.length <= 1;
+  return (
+    <div className={`b-col ${colCls} ${isCenterRound ? 'center-round' : ''}`}>
+      <div className="b-round-label">{label}</div>
+      {matches.map(m => (
+        <KoCard key={m.id} m={m} st={states[m.id]} teams={teams[m.id]} />
+      ))}
+    </div>
+  );
+}
+
+export default function Bracket({ snapshot }) {
+  if (!snapshot) return null;
+
+  const { states, teams, champion } = snapshot;
+  const ko = (round, side) => D.KO.filter(m => m.round === round && m.side === side);
+
+  const m103 = D.KO.find(m => m.id === 'M103');
+  const m104 = D.KO.find(m => m.id === 'M104');
+
+  return (
+    <RevealSection id="bracket">
+      <div className="rule-head">
+        <div className="rule l"></div>
+        <div style={{ textAlign: 'center' }}>
+          <BrandText text="THE ROAD TO THE FINAL" className="section-brand-header" />
+          <div className="section-brand-sub">LIVE TRACKER</div>
+        </div>
+        <div className="rule r"></div>
+      </div>
+      <div className="bracket-scroll">
+        <div className="bracket" id="bracket-root">
+          <RoundCol matches={ko('R32', 'L')} colCls="b-col-32" label="ROUND OF 32" states={states} teams={teams} />
+          <ConnCol count={4} dir="to-r" />
+
+          <RoundCol matches={ko('R16', 'L')} colCls="b-col-16" label="ROUND OF 16" states={states} teams={teams} />
+          <ConnCol count={2} dir="to-r" />
+
+          <RoundCol matches={ko('QF', 'L')} colCls="b-col-qf" label="QUARTER-FINALS" states={states} teams={teams} />
+          <ConnCol count={1} dir="to-r" />
+
+          <RoundCol matches={ko('SF', 'L')} colCls="b-col-sf" label="SEMI-FINALS" states={states} teams={teams} />
+          <Straight />
+
+          {/* Center Column */}
+          <div className="b-col b-col-c">
+            <ChampionsBox champion={champion} />
+            <FinalCard m={m104} st={states.M104} teams={teams.M104} />
+            <ThirdPlaceCard m={m103} st={states.M103} teams={teams.M103} />
+          </div>
+
+          <Straight />
+          <RoundCol matches={ko('SF', 'R')} colCls="b-col-sf" label="SEMI-FINALS" states={states} teams={teams} />
+
+          <ConnCol count={1} dir="to-l" />
+          <RoundCol matches={ko('QF', 'R')} colCls="b-col-qf" label="QUARTER-FINALS" states={states} teams={teams} />
+
+          <ConnCol count={2} dir="to-l" />
+          <RoundCol matches={ko('R16', 'R')} colCls="b-col-16" label="ROUND OF 16" states={states} teams={teams} />
+
+          <ConnCol count={4} dir="to-l" />
+          <RoundCol matches={ko('R32', 'R')} colCls="b-col-32" label="ROUND OF 32" states={states} teams={teams} />
+        </div>
+      </div>
+    </RevealSection>
+  );
+}

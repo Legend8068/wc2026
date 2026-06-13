@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World Cup 2026 — Live Wall Chart</title>
+<meta name="description" content="A living World Cup 2026 wall chart — live scores, auto-updating standings and a self-filling knockout bracket. USA · Canada · Mexico.">
+<link rel="icon" href="assets/football-gold.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="noise"></div>
+
+<!-- ============ TOP BAR ============ -->
+<nav class="topbar">
+  <div class="brand">WC<em>2026</em> WALL CHART<small>USA · CANADA · MEXICO</small></div>
+  <div class="nav-links">
+    <a href="#live">LIVE</a>
+    <a href="#bracket">BRACKET</a>
+    <a href="#groups">GROUPS</a>
+  </div>
+  <div class="nav-status">
+    <span id="clock"></span>
+    <button id="modeToggle" class="mode-badge" type="button">
+      <span class="dot"></span><span id="modeText">LIVE</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ============ TICKER ============ -->
+<div class="ticker-wrap"><div class="ticker" id="ticker"></div></div>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="sunburst"></div>
+  <div class="sun"></div>
+  <img class="football" src="assets/football-gold.svg" alt="">
+
+  <div class="hero-title">
+    <div class="hero-kicker">FIFA WORLD CUP</div>
+    <h1>2026</h1>
+    <div class="hero-hosts">USA <span>·</span> CANADA <span>·</span> MEXICO</div>
+  </div>
+
+  <div class="hero-stats">
+    <div class="hero-stats-label">THE TOURNAMENT AT A GLANCE</div>
+    <div class="stats-grid">
+      <div class="stat"><div class="stat-num" data-count="48">0</div><div class="stat-label">NATIONS</div></div>
+      <div class="stat"><div class="stat-num" data-count="104">0</div><div class="stat-label">MATCHES</div></div>
+      <div class="stat"><div class="stat-num" data-count="16">0</div><div class="stat-label">HOST CITIES</div></div>
+      <div class="stat"><div class="stat-num small">JUN 12 – JUL 20</div><div class="stat-label">2026 · 3 HOST NATIONS</div></div>
+    </div>
+  </div>
+
+  <div class="waves">
+    <svg class="wave wave-back" viewBox="0 0 2800 90" preserveAspectRatio="none">
+      <path fill="#e7b9b2" d="M0,66 c160,-12 300,-6 460,2 c160,8 300,-12 460,-2 c160,10 320,4 480,0 c160,-12 300,-6 460,2 c160,8 300,-12 460,-2 c160,10 320,4 480,0 L2800,90 L0,90 Z"/>
+    </svg>
+    <svg class="wave wave-front" viewBox="0 0 2800 90" preserveAspectRatio="none">
+      <path fill="#d98c84" d="M0,50 c120,-28 240,-28 360,-8 c120,20 240,-12 360,-4 c120,8 240,-20 360,-4 c100,14 220,16 320,16 c120,-28 240,-28 360,-8 c120,20 240,-12 360,-4 c120,8 240,-20 360,-4 c100,14 220,16 320,16 L2800,90 L0,90 Z"/>
+    </svg>
+  </div>
+</header>
+
+<!-- ============ LIVE NOW ============ -->
+<section id="live" class="reveal">
+  <div class="rule-head">
+    <div class="rule l"></div>
+    <h2>MATCH CENTRE<small>SCORES UPDATE AUTOMATICALLY</small></h2>
+    <div class="rule r"></div>
+  </div>
+  <div class="live-strip" id="live-strip"></div>
+</section>
+
+<!-- ============ BRACKET ============ -->
+<section id="bracket" class="reveal">
+  <div class="rule-head">
+    <div class="rule l"></div>
+    <h2>THE ROAD TO THE FINAL<small>FILLS ITSELF AS RESULTS COME IN</small></h2>
+    <div class="rule r"></div>
+  </div>
+  <div class="bracket-scroll">
+    <div class="bracket" id="bracket-root"></div>
+  </div>
+</section>
+
+<!-- ============ GROUPS ============ -->
+<section id="groups">
+  <div class="big-head">
+    <h2>THE 48 <span>·</span> GROUP STAGE</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="groups-grid" id="groups-grid"></div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="f-brand">WORLD CUP 2026 <span>WALL CHART</span></div>
+  <div class="f-note">
+    ALL KICK-OFF TIMES IN SGT (UTC+8) · LIVE SCORES POLLED EVERY MINUTE<br>
+    DEMO MODE PLAYS THE TOURNAMENT FORWARD AT ×1800 — CLICK THE BADGE TO SWITCH
+  </div>
+</footer>
+
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/live.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
