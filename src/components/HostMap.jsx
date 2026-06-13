@@ -81,8 +81,11 @@ function Marker({ v, active, onEnter, onLeave }) {
 
 export default function HostMap() {
   const [active, setActive] = useState(null);
+  const [hoverCC, setHoverCC] = useState(null);
   const enter = useCallback((id) => () => setActive(id), []);
   const leave = useCallback(() => setActive(null), []);
+  const ccEnter = useCallback((cc) => () => setHoverCC(cc), []);
+  const ccLeave = useCallback(() => setHoverCC(null), []);
 
   return (
     <RevealSection id="venues" className="host-map-section">
@@ -100,8 +103,25 @@ export default function HostMap() {
         Hover a city to see its stadium and matchday load.
       </p>
 
-      <div className={`hm-wrap ${active ? 'has-active' : ''}`}>
-        <MapIcon className="hm-map" aria-hidden="true" />
+      <div className={`hm-wrap ${active ? 'has-active' : ''} ${hoverCC ? 'hm-hover-' + hoverCC : ''}`}>
+        {/* Three countries as separate, individually-coloured clip layers
+            (the source SVG is one merged silhouette, so each country is a
+            clipped copy tinted via currentColor). Alaska is a 4th US layer. */}
+        <div className="hm-geo" aria-hidden="true">
+          <MapIcon className="hm-map hm-geo-ca" />
+          <MapIcon className="hm-map hm-geo-us" />
+          <MapIcon className="hm-map hm-geo-ak" />
+          <MapIcon className="hm-map hm-geo-mx" />
+        </div>
+
+        {/* Transparent, clip-shaped hover targets — one per country region. */}
+        <div className="hm-hit" aria-hidden="true">
+          <span className="hm-hit-area hm-hit-ca" onMouseEnter={ccEnter('ca')} onMouseLeave={ccLeave} />
+          <span className="hm-hit-area hm-hit-mx" onMouseEnter={ccEnter('mx')} onMouseLeave={ccLeave} />
+          <span className="hm-hit-area hm-hit-us" onMouseEnter={ccEnter('us')} onMouseLeave={ccLeave} />
+          <span className="hm-hit-area hm-hit-ak" onMouseEnter={ccEnter('us')} onMouseLeave={ccLeave} />
+        </div>
+
         <div className="hm-markers">
           {VENUES.map((v) => (
             <Marker

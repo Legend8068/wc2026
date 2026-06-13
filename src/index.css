@@ -2376,6 +2376,27 @@ footer .f-note {
 .host-map-section {
   --hm-land: #3a5c82;
   --hm-land-hi: #4a72a0;
+
+  /* per-country base + hover (lighter) shades */
+  --hm-us: #35527e;       --hm-us-hi: #5f8de0;
+  --hm-ca: #743039;       --hm-ca-hi: #e8505f;
+  --hm-mx: #2a6b4d;       --hm-mx-hi: #34d98a;
+
+  /* country regions, in % of the map box (viewBox 2816x1536).
+     Boundaries follow the US–Canada (49th parallel + Great Lakes) and
+     US–Mexico borders, calibrated against the venue markers. */
+  --clip-ca: polygon(22% -5%, 105% -5%, 105% 46%, 82% 46%, 78% 47%, 74% 49.5%, 70.5% 45%, 68% 41.5%, 36% 41.5%, 22% 41.5%);
+  --clip-us: polygon(33% 41.5%, 68% 41.5%, 70.5% 45%, 74% 49.5%, 78% 47%, 82% 46%, 105% 46%, 105% 68%, 60% 68%, 57% 67.5%, 53% 66%, 48% 64%, 42% 62%, 33% 62%);
+  --clip-ak: polygon(0% 16%, 22% 16%, 22% 47%, 0% 47%);
+  --clip-mx: polygon(36% 61%, 42% 62%, 48% 64%, 53% 66%, 57% 67.5%, 62% 69%, 82% 80%, 82% 115%, 14% 115%, 14% 78%, 30% 64%);
+}
+
+/* hero map doubles as a jump-to-venues control */
+.hero-map { cursor: pointer; }
+.hero-map:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 4px;
+  border-radius: 8px;
 }
 
 .hm-intro {
@@ -2402,13 +2423,50 @@ footer .f-note {
   width: 100%;
   height: 100%;
   display: block;
-  color: var(--hm-land);
-  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
-  transition: color 0.4s ease;
 }
-.hm-wrap.has-active .hm-map { color: var(--hm-land-hi); }
 
-.hm-markers { position: absolute; inset: 0; }
+/* ── Country layers ───────────────────────────────────────────────
+   The source map is one merged silhouette. We stack four copies, each
+   clipped to a country region and tinted via currentColor, so the three
+   nations read as separate shapes. */
+.hm-geo { position: absolute; inset: 0; }
+.hm-geo .hm-map {
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
+  transition: color 0.4s ease, filter 0.4s ease;
+}
+.hm-geo-us { color: var(--hm-us); clip-path: var(--clip-us); }
+.hm-geo-ak { color: var(--hm-us); clip-path: var(--clip-ak); }
+.hm-geo-ca { color: var(--hm-ca); clip-path: var(--clip-ca); }
+.hm-geo-mx { color: var(--hm-mx); clip-path: var(--clip-mx); }
+
+/* Hover → that country lights up to a lighter shade + coloured glow. */
+.hm-wrap.hm-hover-us .hm-geo-us,
+.hm-wrap.hm-hover-us .hm-geo-ak {
+  color: var(--hm-us-hi);
+  filter: drop-shadow(0 0 18px rgba(95, 141, 224, 0.75)) drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
+}
+.hm-wrap.hm-hover-ca .hm-geo-ca {
+  color: var(--hm-ca-hi);
+  filter: drop-shadow(0 0 18px rgba(232, 80, 95, 0.75)) drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
+}
+.hm-wrap.hm-hover-mx .hm-geo-mx {
+  color: var(--hm-mx-hi);
+  filter: drop-shadow(0 0 18px rgba(52, 217, 138, 0.75)) drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
+}
+
+/* Transparent hover targets shaped to each country region. */
+.hm-hit { position: absolute; inset: 0; z-index: 2; }
+.hm-hit-area { position: absolute; inset: 0; display: block; cursor: pointer; }
+.hm-hit-us { clip-path: var(--clip-us); }
+.hm-hit-ak { clip-path: var(--clip-ak); }
+.hm-hit-ca { clip-path: var(--clip-ca); }
+.hm-hit-mx { clip-path: var(--clip-mx); }
+
+.hm-markers { position: absolute; inset: 0; z-index: 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-geo .hm-map { transition: none; }
+}
 
 /* marker anchor */
 .hm-marker {
