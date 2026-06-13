@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import BrandText from './BrandText';
 import InteractiveBall from './InteractiveBall';
+import MapIcon from './MapIcon';
+
+function scrollToVenues() {
+  const el = document.getElementById('venues');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 function StatNumber({ value, isDate }) {
   const [count, setCount] = useState(isDate ? value : 0);
@@ -63,6 +69,15 @@ export default function Hero() {
         <div className="hero-kicker">FIFA WORLD CUP</div>
         <BrandText text="2026" className="hero-brand-year" useBallForZero={true} />
         <BrandText text="USA · CANADA · MEXICO" className="hero-brand-hosts" />
+        <MapIcon
+          className="hero-map"
+          role="button"
+          tabIndex={0}
+          aria-label="Jump to host venues"
+          title="View host venues"
+          onClick={scrollToVenues}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); scrollToVenues(); } }}
+        />
       </div>
 
       <InteractiveBall />
