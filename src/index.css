@@ -754,14 +754,14 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
 /* Live Card Visuals (3-column layout) */
 .lc-visuals {
   display: grid;
-  grid-template-columns: 1fr 140px 1fr;
+  grid-template-columns: minmax(0, 1fr) 140px minmax(0, 1fr);
   flex: 1;
   background: var(--ink);
   color: var(--white);
 }
 @media (min-width: 640px) {
   .lc-visuals {
-    grid-template-columns: 1fr 180px 1fr;
+    grid-template-columns: minmax(0, 1fr) 160px minmax(0, 1fr);
   }
 }
 
@@ -800,11 +800,14 @@ section { padding: clamp(30px, 4vw, 54px) clamp(16px, 4.5vw, 90px); }
   text-transform: uppercase;
   text-align: center;
   padding: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 @media (min-width: 640px) {
   .lcv-name-bar {
-    font-size: 20px;
-    padding: 12px;
+    font-size: 16px;
+    padding: 12px 8px;
   }
 }
 
