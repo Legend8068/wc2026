@@ -4,36 +4,28 @@ import BrandText from './BrandText';
 import './LoadingScreen.css';
 
 /* ============================================================
-   WC2026 — Loading Screen ("Top bins")
+   WC2026 — Loading Screen ("Kickoff → Goal")
    Mirrors the hero exactly (same FIFA WORLD CUP / 2026 /
    USA · CANADA · MEXICO lockup, same angular BrandText font,
    same dark gradient ground) so the hand-off is seamless.
 
-   A bold flat-graphic top-down pitch (gold frame, white grid,
-   starfield cells) draws in centred & large, then its grid
-   gains one-point-perspective depth and becomes a GOAL with a
-   net. The ball is struck from below, snaps into the net at the
-   "0" of 2026 with whiplash, and settles as the 0 while the
-   lockup reveals. Built with Framer Motion (pathLength draw-on,
-   crossfade morph, springs).
+   A proper muted-green football pitch reveals first as vertical
+   mowing stripes, then its white markings draw on (centre circle,
+   halfway line, penalty & goal boxes, arcs). It then morphs into
+   a front-on GOAL with a sagging net. The ball is struck from
+   below into the net at the "0" of 2026 with whiplash, and
+   settles as the 0 while the lockup reveals. Built with Framer
+   Motion (pathLength draw-on, crossfade morph, springs).
    ============================================================ */
 
 const GOLD = '#f5c542';
-const NET = 'rgba(255,255,255,0.8)';
-const NET_DIM = 'rgba(255,255,255,0.4)';
+const LINE = 'rgba(255,255,255,0.78)';
+const NETC = 'rgba(255,255,255,0.62)';
+const G_LIGHT = '#33543c';
+const G_DARK = '#274132';
 
-/* Stage timeline (ms offsets from start). */
-const T = { draw: 0, goal: 1280, shoot: 2160, whip: 2520, settle: 3000, out: 4150, end: 5050 };
-
-/* Starfield (fractions of the pitch rect) — generated once at module load. */
-const STARS = Array.from({ length: 60 }, (_, i) => ({
-  id: i,
-  fx: Math.random(),
-  fy: Math.random(),
-  s: 0.8 + Math.random() * 1.6,
-  min: 0.1 + Math.random() * 0.12,
-  max: 0.45 + Math.random() * 0.4,
-}));
+/* Stage timeline (ms offsets) — eased & overlapped for smoothness. */
+const T = { stripes: 0, marks: 1050, goal: 2150, shoot: 3120, whip: 3520, settle: 4000, out: 5100, end: 6000 };
 
 function LoadingScreen({ onDone }) {
   const overlay = useRef(null);
@@ -45,13 +37,11 @@ function LoadingScreen({ onDone }) {
   const [stage, setStage] = useState('hidden');
   const finished = useRef(false);
 
-  // Measure the real hero title so our clone sits exactly on top of it.
   useLayoutEffect(() => {
     const ht = document.querySelector('.hero .hero-title');
     setPos(ht ? (() => { const r = ht.getBoundingClientRect(); return { left: r.left, top: r.top }; })() : { left: null, top: null });
   }, []);
 
-  // Once the clone is positioned, measure its "0" glyph and derive the goal.
   useLayoutEffect(() => {
     if (!pos) return;
     const year = title.current?.querySelector('.hero-brand-year');
@@ -62,97 +52,96 @@ function LoadingScreen({ onDone }) {
     const cx = zr.left + zr.width / 2;
     const cy = zr.top + zr.height / 2;
 
-    // size & place the ball + shockwave onto the "0" slot
     const b = ball.current, s = shock.current;
     if (b) { b.style.width = b.style.height = `${d}px`; b.style.left = `${cx - d / 2}px`; b.style.top = `${cy - d / 2}px`; }
     if (s) { s.style.width = s.style.height = `${d}px`; s.style.left = `${cx - d / 2}px`; s.style.top = `${cy - d / 2}px`; }
 
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const scx = vw / 2;
+    const vw = window.innerWidth, vh = window.innerHeight, scx = vw / 2;
 
-    // Big goal mouth, centred horizontally; the "0" sits on the back-net plane,
-    // 34% down inside the mouth, so the back plane is centred on the 0's height.
-    let pitchW = Math.min(vw * 0.86, 1250);
-    let pitchH = pitchW / 1.78;
-    pitchH = Math.min(pitchH, (cy - 18) / 0.34, (vh - cy - 18) / 0.78, vh * 0.7);
-    pitchW = Math.min(pitchH * 1.78, vw * 0.86);
-    pitchH = pitchW / 1.78;
+    // ---- PITCH (top-down, proper proportions ≈ 105:68), centred on (scx, cy)
+    let pW = Math.min(vw * 0.84, 1180);
+    let pH = pW / 1.55;
+    pH = Math.min(pH, (cy - 16) / 0.5, (vh - cy - 16) / 0.5, vh * 0.62);
+    pW = Math.min(pH * 1.55, vw * 0.84);
+    pH = pW / 1.55;
+    const pL = scx - pW / 2, pR = scx + pW / 2, pT = cy - pH / 2, pB = cy + pH / 2;
 
-    const left = scx - pitchW / 2, right = scx + pitchW / 2;
-    const top = cy - pitchH * 0.34, bot = top + pitchH;
+    const NS = 14, sw = pW / NS;
+    const stripeRects = Array.from({ length: NS }, (_, i) => ({ x: pL + i * sw, w: sw, fill: i % 2 ? G_LIGHT : G_DARK }));
+    const stripeLines = Array.from({ length: NS - 1 }, (_, i) => `M ${pL + (i + 1) * sw} ${pT} L ${pL + (i + 1) * sw} ${pB}`);
 
-    const vFr = [1, 2, 3, 4, 5, 6, 7].map((i) => i / 8);
-    const hFr = [1, 2, 3].map((i) => i / 4);
-    const arcR = pitchH * 0.2;
+    const penD = pW * 0.155, penW = pH * 0.6, gbD = pW * 0.055, gbW = pH * 0.27;
+    const rA = pW * 0.087, sxL = pL + pW * 0.105, dxL = (pL + penD) - sxL;
+    const hA = dxL < rA ? Math.sqrt(rA * rA - dxL * dxL) : rA * 0.6;
+    const ccR = pH * 0.135;
 
-    // one-point-perspective back-net plane (recedes up & in, centred on the 0)
-    const bS = 0.6;
-    const bW = pitchW * bS, bH = pitchH * bS;
-    const iL = scx - bW / 2, iR = scx + bW / 2, iT = cy - bH / 2, iB = cy + bH / 2;
-    const vx = (f) => left + pitchW * f, ivx = (f) => iL + bW * f;
-    const hy = (f) => top + pitchH * f, ihy = (f) => iT + bH * f;
+    // ---- GOAL (front-on with gentle depth), centred on (scx); "0" 36% down the mouth
+    let Hg = Math.min((cy - 14) / 0.36, (vh - cy - 30) / 0.64, (vw * 0.78) / 2.3, vh * 0.46);
+    let Wg = Math.min(Hg * 2.3, vw * 0.78);
+    Hg = Wg / 2.3;
+    const gL = scx - Wg / 2, gR = scx + Wg / 2, gT = cy - Hg * 0.36, gB = cy + Hg * 0.64;
+    const NV = 16, NH = 8;
+    const bIn = Wg * 0.05, bUp = Hg * 0.16; // top-net depth (gentle)
 
     setGeo({
       ok: true, vw, vh, cx, cy, d, scx,
-      left, right, top, bot, pitchW, pitchH, bcx: scx, bcy: cy,
-      boundary: `M ${left} ${top} H ${right} V ${bot} H ${left} Z`,
-      verticals: vFr.map((f) => `M ${vx(f)} ${top} L ${vx(f)} ${bot}`),
-      horizontals: hFr.map((f) => `M ${left} ${hy(f)} L ${right} ${hy(f)}`),
-      leftArc: `M ${left} ${cy - arcR} A ${arcR} ${arcR} 0 0 1 ${left} ${cy + arcR}`,
-      rightArc: `M ${right} ${cy - arcR} A ${arcR} ${arcR} 0 0 0 ${right} ${cy + arcR}`,
-      // perspective goal
-      backRect: `M ${iL} ${iT} H ${iR} V ${iB} H ${iL} Z`,
-      connectors: [
-        `M ${left} ${top} L ${iL} ${iT}`, `M ${right} ${top} L ${iR} ${iT}`,
-        `M ${left} ${bot} L ${iL} ${iB}`, `M ${right} ${bot} L ${iR} ${iB}`,
-      ],
-      backV: vFr.map((f) => `M ${ivx(f)} ${iT} L ${ivx(f)} ${iB}`),
-      backH: hFr.map((f) => `M ${iL} ${ihy(f)} L ${iR} ${ihy(f)}`),
-      panels: [
-        ...vFr.map((f) => `M ${vx(f)} ${top} L ${ivx(f)} ${iT}`),
-        ...vFr.map((f) => `M ${vx(f)} ${bot} L ${ivx(f)} ${iB}`),
-        ...hFr.map((f) => `M ${left} ${hy(f)} L ${iL} ${ihy(f)}`),
-        ...hFr.map((f) => `M ${right} ${hy(f)} L ${iR} ${ihy(f)}`),
+      // pitch
+      pL, pR, pT, pB, pW, pH, stripeRects, stripeLines,
+      boundary: `M ${pL} ${pT} H ${pR} V ${pB} H ${pL} Z`,
+      halfway: `M ${scx} ${pT} L ${scx} ${pB}`,
+      ccR, cc: { x: scx, y: cy },
+      spots: [{ x: scx, y: cy }, { x: sxL, y: cy }, { x: pR - pW * 0.105, y: cy }],
+      leftPen: `M ${pL} ${cy - penW / 2} H ${pL + penD} V ${cy + penW / 2} H ${pL}`,
+      rightPen: `M ${pR} ${cy - penW / 2} H ${pR - penD} V ${cy + penW / 2} H ${pR}`,
+      leftGoalB: `M ${pL} ${cy - gbW / 2} H ${pL + gbD} V ${cy + gbW / 2} H ${pL}`,
+      rightGoalB: `M ${pR} ${cy - gbW / 2} H ${pR - gbD} V ${cy + gbW / 2} H ${pR}`,
+      leftArc: `M ${pL + penD} ${cy - hA} A ${rA} ${rA} 0 0 1 ${pL + penD} ${cy + hA}`,
+      rightArc: `M ${pR - penD} ${cy - hA} A ${rA} ${rA} 0 0 0 ${pR - penD} ${cy + hA}`,
+      // goal
+      gL, gR, gT, gB, Wg, Hg, gcx: scx, gcy: cy,
+      posts: [`M ${gL} ${gB} L ${gL} ${gT}`, `M ${gR} ${gB} L ${gR} ${gT}`],
+      crossbar: `M ${gL} ${gT} L ${gR} ${gT}`,
+      goalLine: `M ${gL} ${gB} L ${gR} ${gB}`,
+      netV: Array.from({ length: NV - 1 }, (_, i) => { const x = gL + Wg * (i + 1) / NV; return `M ${x} ${gT} L ${x} ${gB}`; }),
+      netH: Array.from({ length: NH - 1 }, (_, i) => {
+        const f = (i + 1) / NH, y = gT + Hg * f, sag = Hg * 0.05 * (0.4 + 0.6 * f);
+        return `M ${gL} ${y} Q ${scx} ${y + sag} ${gR} ${y}`;
+      }),
+      // gentle top-net depth
+      topNet: [
+        `M ${gL} ${gT} L ${gL + bIn} ${gT - bUp}`,
+        `M ${gR} ${gT} L ${gR - bIn} ${gT - bUp}`,
+        `M ${gL + bIn} ${gT - bUp} L ${gR - bIn} ${gT - bUp}`,
+        ...Array.from({ length: 5 }, (_, i) => { const x = gL + Wg * (i + 1) / 6; const xb = gL + bIn + (Wg - 2 * bIn) * (i + 1) / 6; return `M ${x} ${gT} L ${xb} ${gT - bUp}`; }),
       ],
       belowOffset: (vh - cy) + d * 2.5,
     });
   }, [pos]);
 
-  // Drive the stage timeline once geometry is ready.
   useEffect(() => {
     if (!geo) return;
     document.body.style.overflow = 'hidden';
-
-    const finish = () => {
-      if (finished.current) return;
-      finished.current = true;
-      document.body.style.overflow = '';
-      onDone?.();
-    };
-    const failsafe = setTimeout(finish, 9500);
-
+    const finish = () => { if (finished.current) return; finished.current = true; document.body.style.overflow = ''; onDone?.(); };
+    const failsafe = setTimeout(finish, 10500);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const isStatic = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('staticLoader');
-
     let cancelled = false;
     const timers = [];
     const at = (ms, fn) => timers.push(setTimeout(() => { if (!cancelled) fn(); }, ms));
 
     if (!geo.ok || reduced || isStatic) {
-      setStage('rest');
-      at(700, () => setStage('out'));
-      at(1500, finish);
+      setStage('rest'); at(700, () => setStage('out')); at(1500, finish);
       return () => { cancelled = true; clearTimeout(failsafe); timers.forEach(clearTimeout); document.body.style.overflow = ''; };
     }
 
-    setStage('draw');
+    setStage('stripes');
+    at(T.marks, () => setStage('marks'));
     at(T.goal, () => setStage('goal'));
     at(T.shoot, () => setStage('shoot'));
     at(T.whip, () => setStage('whip'));
     at(T.settle, () => setStage('settle'));
     at(T.out, () => setStage('out'));
     at(T.end, finish);
-
     return () => { cancelled = true; clearTimeout(failsafe); timers.forEach(clearTimeout); document.body.style.overflow = ''; };
   }, [geo, onDone]);
 
@@ -161,27 +150,32 @@ function LoadingScreen({ onDone }) {
     : { position: 'absolute', left: '50%', top: '40%', transform: 'translate(-50%, -50%)', width: 'max-content', alignItems: 'center', opacity: 0 };
 
   // ---- stage flags ----
-  const isGoal = ['goal', 'shoot', 'whip', 'settle', 'out'].includes(stage);
-  const showStars = stage === 'draw';
+  const stripesOn = ['stripes', 'marks'].includes(stage);
+  const marksOn = stage === 'marks';
+  const inGoal = ['goal', 'shoot', 'whip', 'settle', 'out'].includes(stage);
   const ballShot = ['shoot', 'whip', 'settle', 'out', 'rest'].includes(stage);
   const showTitle = ['settle', 'out', 'rest'].includes(stage);
   const fadeGoal = stage === 'settle' || stage === 'out';
   const fadeOut = stage === 'out';
 
-  const frameW = geo ? (isGoal ? geo.d * 0.13 : geo.d * 0.045) : 3;
-  const netW = geo ? Math.max(1.3, geo.d * 0.028) : 2;
+  const netW = geo ? Math.max(1, geo.d * 0.022) : 1.5;
+  const markW = geo ? Math.max(1.4, geo.d * 0.03) : 2;
 
-  // a line that draws on (staggered) during 'draw'
-  const drawLine = (d, stroke, w, delay, key) => (
+  // pitch line that draws on when `on` is true
+  const pLine = (d, on, stroke, w, delay, key) => (
     <motion.path key={key} d={d} fill="none" stroke={stroke} strokeWidth={w}
       strokeLinecap="round" strokeLinejoin="round"
       initial={{ pathLength: 0, opacity: 0 }}
-      animate={stage === 'hidden' ? { pathLength: 0, opacity: 0 } : { pathLength: 1, opacity: 1 }}
-      transition={{ pathLength: { duration: 0.8, delay, ease: 'easeInOut' }, opacity: { duration: 0.3, delay } }} />
+      animate={{ pathLength: on ? 1 : 0, opacity: on ? 1 : 0 }}
+      transition={{ pathLength: { duration: 0.7, delay, ease: 'easeInOut' }, opacity: { duration: 0.3, delay } }} />
   );
-  // a static line (used for the perspective net that fades in on the morph)
-  const netLine = (d, stroke, w, key) => (
-    <path key={key} d={d} fill="none" stroke={stroke} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />
+  // goal line that draws on when in goal
+  const gLine = (d, stroke, w, delay, key) => (
+    <motion.path key={key} d={d} fill="none" stroke={stroke} strokeWidth={w}
+      strokeLinecap="round" strokeLinejoin="round"
+      initial={{ pathLength: 0, opacity: 0 }}
+      animate={{ pathLength: inGoal ? 1 : 0, opacity: inGoal ? 1 : 0 }}
+      transition={{ pathLength: { duration: 0.6, delay, ease: 'easeInOut' }, opacity: { duration: 0.35, delay } }} />
   );
 
   return (
@@ -196,65 +190,82 @@ function LoadingScreen({ onDone }) {
     >
       <div className="ls-grain" />
 
-      {/* the pitch → goal */}
       {geo && geo.ok && (
-        <motion.svg width={geo.vw} height={geo.vh} viewBox={`0 0 ${geo.vw} ${geo.vh}`}
-          style={{ position: 'absolute', inset: 0, overflow: 'visible', pointerEvents: 'none' }}
-          animate={{ opacity: stage === 'hidden' ? 0 : fadeGoal ? 0 : 1 }}
-          transition={{ duration: fadeGoal ? 0.7 : 0.4, ease: 'easeInOut' }}>
+        <svg className="ls-scene" width={geo.vw} height={geo.vh} viewBox={`0 0 ${geo.vw} ${geo.vh}`}
+          style={{ position: 'absolute', inset: 0, overflow: 'visible', pointerEvents: 'none' }}>
           <defs>
-            <clipPath id="ls-pitch-clip"><rect x={geo.left} y={geo.top} width={geo.pitchW} height={geo.pitchH} /></clipPath>
+            <clipPath id="ls-pitch-clip"><rect x={geo.pL} y={geo.pT} width={geo.pW} height={geo.pH} rx={Math.min(14, geo.d * 0.18)} /></clipPath>
+            <radialGradient id="ls-goal-depth" cx="50%" cy="40%" r="75%">
+              <stop offset="0%" stopColor="#0a1322" />
+              <stop offset="100%" stopColor="#05080f" />
+            </radialGradient>
           </defs>
 
-          {/* dark cells + starfield (interior darkness stays as the goal's depth) */}
-          <g clipPath="url(#ls-pitch-clip)">
-            <rect x={geo.left} y={geo.top} width={geo.pitchW} height={geo.pitchH} fill="#080f1c" />
-            {STARS.map((st) => (
-              <motion.circle key={st.id} r={st.s} fill="#fff"
-                cx={geo.left + geo.pitchW * st.fx} cy={geo.top + geo.pitchH * st.fy}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: showStars ? [st.min, st.max, st.min] : 0 }}
-                transition={showStars ? { duration: 3, repeat: Infinity, ease: 'easeInOut', delay: st.id * 0.03 } : { duration: 0.5 }} />
-            ))}
-          </g>
-
-          {/* flat pitch grid (white) — fades out as the net gains depth */}
-          <motion.g animate={{ opacity: isGoal ? 0 : 1 }} transition={{ duration: 0.5 }}>
-            {geo.verticals.map((d, i) => drawLine(d, NET, netW, 0.2 + i * 0.05, `v${i}`))}
-            {geo.horizontals.map((d, i) => drawLine(d, NET, netW, 0.45 + i * 0.08, `h${i}`))}
-          </motion.g>
-
-          {/* penalty arcs (gold) — fade out as it becomes a goal */}
-          <motion.g animate={{ opacity: isGoal ? 0 : 1 }} transition={{ duration: 0.4 }}>
-            {drawLine(geo.leftArc, GOLD, Math.max(2, geo.d * 0.05), 0.6, 'la')}
-            {drawLine(geo.rightArc, GOLD, Math.max(2, geo.d * 0.05), 0.6, 'ra')}
-          </motion.g>
-
-          {/* perspective net (the goal depth) — fades in on the morph, whiplash on impact */}
+          {/* ---------- PITCH (top-down) ---------- */}
           <motion.g
             initial={{ opacity: 0 }}
-            animate={{ opacity: isGoal ? 1 : 0, scale: stage === 'whip' ? [1, 1.035, 0.99, 1] : 1 }}
-            transition={{ opacity: { duration: 0.55, delay: isGoal ? 0.15 : 0 }, scale: { duration: 0.5, ease: 'easeOut' } }}
-            style={{ transformOrigin: `${geo.bcx}px ${geo.bcy}px` }}>
-            {geo.panels.map((d, i) => netLine(d, NET_DIM, netW * 0.85, `p${i}`))}
-            {geo.backV.map((d, i) => netLine(d, NET, netW, `bv${i}`))}
-            {geo.backH.map((d, i) => netLine(d, NET, netW, `bh${i}`))}
-            {netLine(geo.backRect, GOLD, Math.max(2, geo.d * 0.04), 'br')}
-            {geo.connectors.map((d, i) => netLine(d, GOLD, Math.max(2, geo.d * 0.05), `c${i}`))}
+            animate={{ opacity: stage === 'hidden' ? 0 : inGoal ? 0 : 1, scale: inGoal ? 1.04 : 1 }}
+            transition={{ opacity: { duration: inGoal ? 0.6 : 0.5, ease: 'easeInOut' }, scale: { duration: 0.7, ease: 'easeIn' } }}
+            style={{ transformOrigin: `${geo.scx}px ${geo.cy}px` }}>
+            {/* green mowing stripes */}
+            <motion.g clipPath="url(#ls-pitch-clip)"
+              initial={{ opacity: 0 }} animate={{ opacity: stripesOn ? 1 : 0 }} transition={{ duration: 0.6 }}>
+              {geo.stripeRects.map((s, i) => (
+                <rect key={i} x={s.x} y={geo.pT} width={s.w + 0.5} height={geo.pH} fill={s.fill} />
+              ))}
+            </motion.g>
+
+            {/* vertical stripe lines first */}
+            {geo.stripeLines.map((d, i) => pLine(d, stripesOn, LINE, Math.max(1, geo.d * 0.02), 0.15 + i * 0.04, `sl${i}`))}
+
+            {/* remaining markings (draw on at 'marks') */}
+            {pLine(geo.boundary, marksOn, LINE, markW, 0, 'bd')}
+            {pLine(geo.halfway, marksOn, LINE, markW, 0.1, 'hw')}
+            {pLine(geo.leftPen, marksOn, LINE, markW, 0.2, 'lp')}
+            {pLine(geo.rightPen, marksOn, LINE, markW, 0.2, 'rp')}
+            {pLine(geo.leftGoalB, marksOn, LINE, markW, 0.3, 'lg')}
+            {pLine(geo.rightGoalB, marksOn, LINE, markW, 0.3, 'rg')}
+            {pLine(geo.leftArc, marksOn, LINE, markW, 0.4, 'la')}
+            {pLine(geo.rightArc, marksOn, LINE, markW, 0.4, 'ra')}
+            <motion.circle cx={geo.cc.x} cy={geo.cc.y} r={geo.ccR} fill="none" stroke={LINE} strokeWidth={markW}
+              initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: marksOn ? 1 : 0, opacity: marksOn ? 1 : 0 }}
+              transition={{ pathLength: { duration: 0.7, delay: 0.15, ease: 'easeInOut' }, opacity: { duration: 0.3, delay: 0.15 } }} />
+            {geo.spots.map((sp, i) => (
+              <motion.circle key={i} cx={sp.x} cy={sp.y} r={Math.max(2, geo.d * 0.05)} fill={LINE}
+                initial={{ opacity: 0 }} animate={{ opacity: marksOn ? 1 : 0 }} transition={{ duration: 0.3, delay: 0.3 }} />
+            ))}
           </motion.g>
 
-          {/* frame → goal posts + crossbar (gold; thickens on the morph) */}
-          <motion.path d={geo.boundary} fill="none" stroke={GOLD}
-            strokeLinecap="round" strokeLinejoin="round"
-            initial={{ pathLength: 0, opacity: 0, strokeWidth: geo.d * 0.045 }}
-            animate={{ pathLength: 1, opacity: 1, strokeWidth: frameW }}
-            transition={{ pathLength: { duration: 0.9, ease: 'easeInOut' }, opacity: { duration: 0.3 }, strokeWidth: { duration: 0.7, ease: 'easeOut' } }} />
-        </motion.svg>
+          {/* ---------- GOAL (front-on, gentle depth + sagging net) ---------- */}
+          <motion.g
+            initial={{ opacity: 0 }}
+            animate={{ opacity: inGoal ? (fadeGoal ? 0 : 1) : 0 }}
+            transition={{ duration: fadeGoal ? 0.7 : 0.5, ease: 'easeInOut' }}>
+            {/* dark interior for depth */}
+            <motion.rect x={geo.gL} y={geo.gT} width={geo.Wg} height={geo.gB - geo.gT} fill="url(#ls-goal-depth)"
+              initial={{ opacity: 0 }} animate={{ opacity: inGoal ? 0.9 : 0 }} transition={{ duration: 0.5 }} />
+
+            {/* net (whip-flexes on impact) */}
+            <motion.g
+              animate={{ scale: stage === 'whip' ? [1, 1.025, 0.992, 1] : 1, y: stage === 'whip' ? [0, geo.d * 0.12, 0] : 0 }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+              style={{ transformOrigin: `${geo.cx}px ${geo.cy}px` }}>
+              {geo.topNet.map((d, i) => gLine(d, NETC, netW * 0.85, 0.2 + i * 0.02, `tn${i}`))}
+              {geo.netV.map((d, i) => gLine(d, NETC, netW, 0.1 + i * 0.015, `nv${i}`))}
+              {geo.netH.map((d, i) => gLine(d, NETC, netW, 0.18 + i * 0.03, `nh${i}`))}
+            </motion.g>
+
+            {/* gold frame: posts + crossbar (thick), goal line (thin) */}
+            {gLine(geo.goalLine, GOLD, Math.max(2, geo.d * 0.05), 0, 'gln')}
+            {geo.posts.map((d, i) => gLine(d, GOLD, Math.max(3, geo.d * 0.11), 0.05, `po${i}`))}
+            {gLine(geo.crossbar, GOLD, Math.max(3, geo.d * 0.11), 0.1, 'cb')}
+          </motion.g>
+        </svg>
       )}
 
       <div className="ls-vignette" />
 
-      {/* exact hero lockup, white angular BrandText (revealed around the ball) */}
+      {/* exact hero lockup (revealed around the ball) */}
       <motion.div ref={title} className="hero-title" style={titleStyle}
         animate={{ opacity: showTitle ? 1 : 0 }}
         transition={{ duration: 1.0, delay: stage === 'settle' ? 0.15 : 0, ease: 'easeInOut' }}>

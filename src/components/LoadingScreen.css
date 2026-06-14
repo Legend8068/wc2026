@@ -1,33 +1,18 @@
 /* ============================================================
-   WC2026 — Loading Screen choreography ("Top bins")
-   A bold flat-graphic top-down pitch (gold frame, white grid,
-   starfield cells) tilts up in perspective into a goal whose
-   grid becomes the net. The ball is struck from below, snaps
-   into the net at the "0" of 2026 with whiplash, then settles
-   as the 0 while the lockup reveals.
+   WC2026 — Loading Screen choreography ("Kickoff → Goal")
+   A proper muted-green football pitch reveals as vertical mowing
+   stripes, its white markings draw on, then it morphs into a
+   front-on goal with a sagging net. The ball is struck from
+   below into the net at the "0" of 2026 with whiplash, then
+   settles as the 0 while the lockup reveals. Integrated into the
+   site's navy + gold world. Built with Framer Motion.
    ============================================================ */
 
-/* perspective stage for the 3D tilt */
-.ls-stage3d {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  perspective: 1150px;
-  perspective-origin: 50% 50%;
-}
-.ls-plane {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-
-/* ---- Texture: film grain + vignette ---- */
 .ls-grain {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.05;
+  opacity: 0.045;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 220px 220px;
@@ -36,9 +21,9 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(125% 125% at 50% 46%, rgba(12, 21, 32, 0) 40%, rgba(8, 14, 24, 0.6) 100%);
+  background: radial-gradient(125% 125% at 50% 46%, rgba(12, 21, 32, 0) 42%, rgba(8, 14, 24, 0.62) 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ls-grain, .ls-stage3d, .ls-vignette { display: none !important; }
+  .ls-grain, .ls-scene, .ls-vignette { display: none !important; }
 }
