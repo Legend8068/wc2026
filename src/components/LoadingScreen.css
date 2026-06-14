@@ -1,12 +1,28 @@
 /* ============================================================
-   WC2026 — Loading Screen choreography ("Kickoff")
-   Inspired by a bold flat-graphic sports loop: gold top-down
-   pitch markings draw themselves onto the navy ground, the ball
-   drops onto the centre spot, and the centre circle tightens
-   into the "0" of 2026 as the lockup reveals.
+   WC2026 — Loading Screen choreography ("Top bins")
+   A bold flat-graphic top-down pitch (gold frame, white grid,
+   starfield cells) tilts up in perspective into a goal whose
+   grid becomes the net. The ball is struck from below, snaps
+   into the net at the "0" of 2026 with whiplash, then settles
+   as the 0 while the lockup reveals.
    ============================================================ */
 
-/* ---- Texture: film grain + faint starfield + vignette ---- */
+/* perspective stage for the 3D tilt */
+.ls-stage3d {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  perspective: 1150px;
+  perspective-origin: 50% 50%;
+}
+.ls-plane {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ---- Texture: film grain + vignette ---- */
 .ls-grain {
   position: absolute;
   inset: 0;
@@ -16,28 +32,13 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 220px 220px;
 }
-
-.ls-stars { position: absolute; inset: 0; pointer-events: none; }
-.ls-star {
-  position: absolute;
-  border-radius: 50%;
-  background: #fff;
-  transform: translate(-50%, -50%);
-  animation: ls-twinkle 3.2s ease-in-out infinite;
-}
-@keyframes ls-twinkle {
-  0%, 100% { opacity: var(--tw-min, 0.12); }
-  50%      { opacity: var(--tw-max, 0.5); }
-}
-
 .ls-vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(120% 120% at var(--vx, 50%) var(--vy, 42%),
-    rgba(12, 21, 32, 0) 38%, rgba(8, 14, 24, 0.55) 100%);
+  background: radial-gradient(125% 125% at 50% 46%, rgba(12, 21, 32, 0) 40%, rgba(8, 14, 24, 0.6) 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ls-grain, .ls-stars, .ls-pitch, .ls-vignette { display: none !important; }
+  .ls-grain, .ls-stage3d, .ls-vignette { display: none !important; }
 }

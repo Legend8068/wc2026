@@ -4,43 +4,45 @@ import BrandText from './BrandText';
 import './LoadingScreen.css';
 
 /* ============================================================
-   WC2026 — Loading Screen ("Kickoff")
+   WC2026 — Loading Screen ("Top bins")
    Mirrors the hero exactly (same FIFA WORLD CUP / 2026 /
    USA · CANADA · MEXICO lockup, same angular BrandText font,
    same dark gradient ground) so the hand-off is seamless.
 
-   Inspired by a bold flat-graphic sports loop, in the site's
-   navy + gold language: gold top-down pitch markings draw
-   themselves onto the navy ground, the ball drops onto the
-   centre spot with a springy bounce, then the centre circle
-   tightens into the rounded "0" of 2026 as the lockup reveals.
-   Built with Framer Motion (pathLength draw-on + springs).
+   A bold flat-graphic top-down pitch (gold frame, white grid,
+   starfield cells) draws in centred & large, then its grid
+   gains one-point-perspective depth and becomes a GOAL with a
+   net. The ball is struck from below, snaps into the net at the
+   "0" of 2026 with whiplash, and settles as the 0 while the
+   lockup reveals. Built with Framer Motion (pathLength draw-on,
+   crossfade morph, springs).
    ============================================================ */
 
 const GOLD = '#f5c542';
+const NET = 'rgba(255,255,255,0.8)';
+const NET_DIM = 'rgba(255,255,255,0.4)';
 
 /* Stage timeline (ms offsets from start). */
-const T = { draw: 0, drop: 1320, land: 2280, morph: 2560, out: 3480, end: 4380 };
+const T = { draw: 0, goal: 1280, shoot: 2160, whip: 2520, settle: 3000, out: 4150, end: 5050 };
 
-/* Faint starfield — generated once at module load (kept out of render). */
-const STARS = Array.from({ length: 54 }, (_, i) => ({
+/* Starfield (fractions of the pitch rect) — generated once at module load. */
+const STARS = Array.from({ length: 60 }, (_, i) => ({
   id: i,
-  x: Math.random() * 100,
-  y: Math.random() * 100,
-  s: 1 + Math.random() * 1.8,
-  min: 0.06 + Math.random() * 0.1,
-  max: 0.3 + Math.random() * 0.35,
-  delay: -Math.random() * 3.2,
+  fx: Math.random(),
+  fy: Math.random(),
+  s: 0.8 + Math.random() * 1.6,
+  min: 0.1 + Math.random() * 0.12,
+  max: 0.45 + Math.random() * 0.4,
 }));
 
 function LoadingScreen({ onDone }) {
   const overlay = useRef(null);
   const title = useRef(null);
   const ball = useRef(null);
-  const pulse = useRef(null);
+  const shock = useRef(null);
   const [pos, setPos] = useState(null);
   const [geo, setGeo] = useState(null);
-  const [stage, setStage] = useState('hidden'); // hidden → draw → drop → land → morph → out
+  const [stage, setStage] = useState('hidden');
   const finished = useRef(false);
 
   // Measure the real hero title so our clone sits exactly on top of it.
@@ -49,7 +51,7 @@ function LoadingScreen({ onDone }) {
     setPos(ht ? (() => { const r = ht.getBoundingClientRect(); return { left: r.left, top: r.top }; })() : { left: null, top: null });
   }, []);
 
-  // Once the clone is positioned, measure its "0" glyph and derive the pitch.
+  // Once the clone is positioned, measure its "0" glyph and derive the goal.
   useLayoutEffect(() => {
     if (!pos) return;
     const year = title.current?.querySelector('.hero-brand-year');
@@ -60,32 +62,59 @@ function LoadingScreen({ onDone }) {
     const cx = zr.left + zr.width / 2;
     const cy = zr.top + zr.height / 2;
 
-    // size & place the ball + pulse onto the "0" slot
-    const b = ball.current, p = pulse.current;
+    // size & place the ball + shockwave onto the "0" slot
+    const b = ball.current, s = shock.current;
     if (b) { b.style.width = b.style.height = `${d}px`; b.style.left = `${cx - d / 2}px`; b.style.top = `${cy - d / 2}px`; }
-    if (p) { p.style.width = p.style.height = `${d}px`; p.style.left = `${cx - d / 2}px`; p.style.top = `${cy - d / 2}px`; }
+    if (s) { s.style.width = s.style.height = `${d}px`; s.style.left = `${cx - d / 2}px`; s.style.top = `${cy - d / 2}px`; }
 
     const vw = window.innerWidth, vh = window.innerHeight;
-    const pitchW = Math.min(vw * 0.92, 1180);
-    const pitchH = Math.min(pitchW * 0.6, vh * 0.78);
-    const R0 = d * 2.35;                 // centre-circle radius while it's a pitch
-    const rEnd = d * 0.62;               // ring hugging the ball once it's the "0"
-    const boxW = pitchW * 0.15;
-    const boxH = Math.min(pitchH * 0.55, R0 * 2.6);
-    const left = cx - pitchW / 2, right = cx + pitchW / 2;
-    const top = cy - pitchH / 2, bot = cy + pitchH / 2;
-    const arcR = boxH * 0.32;
+    const scx = vw / 2;
+
+    // Big goal mouth, centred horizontally; the "0" sits on the back-net plane,
+    // 34% down inside the mouth, so the back plane is centred on the 0's height.
+    let pitchW = Math.min(vw * 0.86, 1250);
+    let pitchH = pitchW / 1.78;
+    pitchH = Math.min(pitchH, (cy - 18) / 0.34, (vh - cy - 18) / 0.78, vh * 0.7);
+    pitchW = Math.min(pitchH * 1.78, vw * 0.86);
+    pitchH = pitchW / 1.78;
+
+    const left = scx - pitchW / 2, right = scx + pitchW / 2;
+    const top = cy - pitchH * 0.34, bot = top + pitchH;
+
+    const vFr = [1, 2, 3, 4, 5, 6, 7].map((i) => i / 8);
+    const hFr = [1, 2, 3].map((i) => i / 4);
+    const arcR = pitchH * 0.2;
+
+    // one-point-perspective back-net plane (recedes up & in, centred on the 0)
+    const bS = 0.6;
+    const bW = pitchW * bS, bH = pitchH * bS;
+    const iL = scx - bW / 2, iR = scx + bW / 2, iT = cy - bH / 2, iB = cy + bH / 2;
+    const vx = (f) => left + pitchW * f, ivx = (f) => iL + bW * f;
+    const hy = (f) => top + pitchH * f, ihy = (f) => iT + bH * f;
 
     setGeo({
-      ok: true, vw, vh, cx, cy, d, R0, rEnd,
+      ok: true, vw, vh, cx, cy, d, scx,
+      left, right, top, bot, pitchW, pitchH, bcx: scx, bcy: cy,
       boundary: `M ${left} ${top} H ${right} V ${bot} H ${left} Z`,
-      halfway: `M ${cx} ${top} L ${cx} ${bot}`,
-      leftBox: `M ${left} ${cy - boxH / 2} H ${left + boxW} V ${cy + boxH / 2} H ${left}`,
-      rightBox: `M ${right} ${cy - boxH / 2} H ${right - boxW} V ${cy + boxH / 2} H ${right}`,
-      leftArc: `M ${left + boxW} ${cy - arcR} A ${arcR} ${arcR} 0 0 1 ${left + boxW} ${cy + arcR}`,
-      rightArc: `M ${right - boxW} ${cy - arcR} A ${arcR} ${arcR} 0 0 0 ${right - boxW} ${cy + arcR}`,
-      spotR: Math.max(2.5, d * 0.06),
-      dropFrom: -(cy + d * 1.5),
+      verticals: vFr.map((f) => `M ${vx(f)} ${top} L ${vx(f)} ${bot}`),
+      horizontals: hFr.map((f) => `M ${left} ${hy(f)} L ${right} ${hy(f)}`),
+      leftArc: `M ${left} ${cy - arcR} A ${arcR} ${arcR} 0 0 1 ${left} ${cy + arcR}`,
+      rightArc: `M ${right} ${cy - arcR} A ${arcR} ${arcR} 0 0 0 ${right} ${cy + arcR}`,
+      // perspective goal
+      backRect: `M ${iL} ${iT} H ${iR} V ${iB} H ${iL} Z`,
+      connectors: [
+        `M ${left} ${top} L ${iL} ${iT}`, `M ${right} ${top} L ${iR} ${iT}`,
+        `M ${left} ${bot} L ${iL} ${iB}`, `M ${right} ${bot} L ${iR} ${iB}`,
+      ],
+      backV: vFr.map((f) => `M ${ivx(f)} ${iT} L ${ivx(f)} ${iB}`),
+      backH: hFr.map((f) => `M ${iL} ${ihy(f)} L ${iR} ${ihy(f)}`),
+      panels: [
+        ...vFr.map((f) => `M ${vx(f)} ${top} L ${ivx(f)} ${iT}`),
+        ...vFr.map((f) => `M ${vx(f)} ${bot} L ${ivx(f)} ${iB}`),
+        ...hFr.map((f) => `M ${left} ${hy(f)} L ${iL} ${ihy(f)}`),
+        ...hFr.map((f) => `M ${right} ${hy(f)} L ${iR} ${ihy(f)}`),
+      ],
+      belowOffset: (vh - cy) + d * 2.5,
     });
   }, [pos]);
 
@@ -100,7 +129,7 @@ function LoadingScreen({ onDone }) {
       document.body.style.overflow = '';
       onDone?.();
     };
-    const failsafe = setTimeout(finish, 9000);
+    const failsafe = setTimeout(finish, 9500);
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const isStatic = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('staticLoader');
@@ -110,17 +139,17 @@ function LoadingScreen({ onDone }) {
     const at = (ms, fn) => timers.push(setTimeout(() => { if (!cancelled) fn(); }, ms));
 
     if (!geo.ok || reduced || isStatic) {
-      // No pitch — just present the lockup with the ball already in the "0".
       setStage('rest');
-      at(reduced || isStatic ? 700 : 700, () => setStage('out'));
-      at(reduced || isStatic ? 1500 : 1500, finish);
+      at(700, () => setStage('out'));
+      at(1500, finish);
       return () => { cancelled = true; clearTimeout(failsafe); timers.forEach(clearTimeout); document.body.style.overflow = ''; };
     }
 
     setStage('draw');
-    at(T.drop, () => setStage('drop'));
-    at(T.land, () => setStage('land'));
-    at(T.morph, () => setStage('morph'));
+    at(T.goal, () => setStage('goal'));
+    at(T.shoot, () => setStage('shoot'));
+    at(T.whip, () => setStage('whip'));
+    at(T.settle, () => setStage('settle'));
     at(T.out, () => setStage('out'));
     at(T.end, finish);
 
@@ -131,30 +160,28 @@ function LoadingScreen({ onDone }) {
     ? { position: 'absolute', left: pos.left, top: pos.top, width: 'max-content', opacity: 0 }
     : { position: 'absolute', left: '50%', top: '40%', transform: 'translate(-50%, -50%)', width: 'max-content', alignItems: 'center', opacity: 0 };
 
-  // ---- stage-driven animation targets ----
-  const drawn = stage === 'draw' || stage === 'drop' || stage === 'land';
-  const gone = stage === 'morph' || stage === 'out';
-  const dropped = stage === 'drop' || stage === 'land' || stage === 'morph' || stage === 'out';
-  const showTitle = stage === 'morph' || stage === 'out' || stage === 'rest';
+  // ---- stage flags ----
+  const isGoal = ['goal', 'shoot', 'whip', 'settle', 'out'].includes(stage);
+  const showStars = stage === 'draw';
+  const ballShot = ['shoot', 'whip', 'settle', 'out', 'rest'].includes(stage);
+  const showTitle = ['settle', 'out', 'rest'].includes(stage);
+  const fadeGoal = stage === 'settle' || stage === 'out';
   const fadeOut = stage === 'out';
 
-  // A pitch line: draws on (pathLength 0→1) staggered, retracts on morph.
-  const line = (d, delay, key, extra = {}) => (
-    <motion.path
-      key={key}
-      d={d}
-      fill="none"
-      stroke={GOLD}
-      strokeWidth={geo ? Math.max(2, geo.d * 0.045) : 3}
-      strokeLinecap="round"
-      strokeLinejoin="round"
+  const frameW = geo ? (isGoal ? geo.d * 0.13 : geo.d * 0.045) : 3;
+  const netW = geo ? Math.max(1.3, geo.d * 0.028) : 2;
+
+  // a line that draws on (staggered) during 'draw'
+  const drawLine = (d, stroke, w, delay, key) => (
+    <motion.path key={key} d={d} fill="none" stroke={stroke} strokeWidth={w}
+      strokeLinecap="round" strokeLinejoin="round"
       initial={{ pathLength: 0, opacity: 0 }}
-      animate={drawn ? { pathLength: 1, opacity: 1 } : gone ? { pathLength: 0, opacity: 0 } : { pathLength: 0, opacity: 0 }}
-      transition={drawn
-        ? { pathLength: { duration: 0.85, delay, ease: 'easeInOut' }, opacity: { duration: 0.3, delay } }
-        : { pathLength: { duration: 0.45, delay: delay * 0.25, ease: 'easeIn' }, opacity: { duration: 0.4, delay: delay * 0.25 } }}
-      style={extra.style}
-    />
+      animate={stage === 'hidden' ? { pathLength: 0, opacity: 0 } : { pathLength: 1, opacity: 1 }}
+      transition={{ pathLength: { duration: 0.8, delay, ease: 'easeInOut' }, opacity: { duration: 0.3, delay } }} />
+  );
+  // a static line (used for the perspective net that fades in on the morph)
+  const netLine = (d, stroke, w, key) => (
+    <path key={key} d={d} fill="none" stroke={stroke} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />
   );
 
   return (
@@ -167,89 +194,94 @@ function LoadingScreen({ onDone }) {
       animate={{ opacity: fadeOut ? 0 : 1 }}
       transition={{ duration: 0.85, ease: 'easeInOut' }}
     >
-      {/* texture: starfield + grain + vignette (vignette focuses on the "0") */}
-      <motion.div className="ls-stars" initial={{ opacity: 0 }} animate={{ opacity: stage === 'hidden' ? 0 : fadeOut ? 0 : 1 }} transition={{ duration: 0.8 }}>
-        {STARS.map((st) => (
-          <span key={st.id} className="ls-star" style={{
-            left: `${st.x}%`, top: `${st.y}%`, width: st.s, height: st.s,
-            '--tw-min': st.min, '--tw-max': st.max, animationDelay: `${st.delay}s`,
-          }} />
-        ))}
-      </motion.div>
       <div className="ls-grain" />
+
+      {/* the pitch → goal */}
       {geo && geo.ok && (
-        <div className="ls-vignette" style={{ '--vx': `${(geo.cx / geo.vw) * 100}%`, '--vy': `${(geo.cy / geo.vh) * 100}%` }} />
+        <motion.svg width={geo.vw} height={geo.vh} viewBox={`0 0 ${geo.vw} ${geo.vh}`}
+          style={{ position: 'absolute', inset: 0, overflow: 'visible', pointerEvents: 'none' }}
+          animate={{ opacity: stage === 'hidden' ? 0 : fadeGoal ? 0 : 1 }}
+          transition={{ duration: fadeGoal ? 0.7 : 0.4, ease: 'easeInOut' }}>
+          <defs>
+            <clipPath id="ls-pitch-clip"><rect x={geo.left} y={geo.top} width={geo.pitchW} height={geo.pitchH} /></clipPath>
+          </defs>
+
+          {/* dark cells + starfield (interior darkness stays as the goal's depth) */}
+          <g clipPath="url(#ls-pitch-clip)">
+            <rect x={geo.left} y={geo.top} width={geo.pitchW} height={geo.pitchH} fill="#080f1c" />
+            {STARS.map((st) => (
+              <motion.circle key={st.id} r={st.s} fill="#fff"
+                cx={geo.left + geo.pitchW * st.fx} cy={geo.top + geo.pitchH * st.fy}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: showStars ? [st.min, st.max, st.min] : 0 }}
+                transition={showStars ? { duration: 3, repeat: Infinity, ease: 'easeInOut', delay: st.id * 0.03 } : { duration: 0.5 }} />
+            ))}
+          </g>
+
+          {/* flat pitch grid (white) — fades out as the net gains depth */}
+          <motion.g animate={{ opacity: isGoal ? 0 : 1 }} transition={{ duration: 0.5 }}>
+            {geo.verticals.map((d, i) => drawLine(d, NET, netW, 0.2 + i * 0.05, `v${i}`))}
+            {geo.horizontals.map((d, i) => drawLine(d, NET, netW, 0.45 + i * 0.08, `h${i}`))}
+          </motion.g>
+
+          {/* penalty arcs (gold) — fade out as it becomes a goal */}
+          <motion.g animate={{ opacity: isGoal ? 0 : 1 }} transition={{ duration: 0.4 }}>
+            {drawLine(geo.leftArc, GOLD, Math.max(2, geo.d * 0.05), 0.6, 'la')}
+            {drawLine(geo.rightArc, GOLD, Math.max(2, geo.d * 0.05), 0.6, 'ra')}
+          </motion.g>
+
+          {/* perspective net (the goal depth) — fades in on the morph, whiplash on impact */}
+          <motion.g
+            initial={{ opacity: 0 }}
+            animate={{ opacity: isGoal ? 1 : 0, scale: stage === 'whip' ? [1, 1.035, 0.99, 1] : 1 }}
+            transition={{ opacity: { duration: 0.55, delay: isGoal ? 0.15 : 0 }, scale: { duration: 0.5, ease: 'easeOut' } }}
+            style={{ transformOrigin: `${geo.bcx}px ${geo.bcy}px` }}>
+            {geo.panels.map((d, i) => netLine(d, NET_DIM, netW * 0.85, `p${i}`))}
+            {geo.backV.map((d, i) => netLine(d, NET, netW, `bv${i}`))}
+            {geo.backH.map((d, i) => netLine(d, NET, netW, `bh${i}`))}
+            {netLine(geo.backRect, GOLD, Math.max(2, geo.d * 0.04), 'br')}
+            {geo.connectors.map((d, i) => netLine(d, GOLD, Math.max(2, geo.d * 0.05), `c${i}`))}
+          </motion.g>
+
+          {/* frame → goal posts + crossbar (gold; thickens on the morph) */}
+          <motion.path d={geo.boundary} fill="none" stroke={GOLD}
+            strokeLinecap="round" strokeLinejoin="round"
+            initial={{ pathLength: 0, opacity: 0, strokeWidth: geo.d * 0.045 }}
+            animate={{ pathLength: 1, opacity: 1, strokeWidth: frameW }}
+            transition={{ pathLength: { duration: 0.9, ease: 'easeInOut' }, opacity: { duration: 0.3 }, strokeWidth: { duration: 0.7, ease: 'easeOut' } }} />
+        </motion.svg>
       )}
 
-      {/* the top-down pitch, drawn in gold around the "0" slot */}
-      {geo && geo.ok && (
-        <svg className="ls-pitch" width={geo.vw} height={geo.vh} viewBox={`0 0 ${geo.vw} ${geo.vh}`}
-          style={{
-            position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'visible',
-            WebkitMaskImage: `radial-gradient(circle at ${geo.cx}px ${geo.cy}px, #000 0, #000 ${geo.R0 * 1.1}px, transparent ${geo.R0 * 2.25}px)`,
-            maskImage: `radial-gradient(circle at ${geo.cx}px ${geo.cy}px, #000 0, #000 ${geo.R0 * 1.1}px, transparent ${geo.R0 * 2.25}px)`,
-          }}>
-          {line(geo.boundary, 0, 'b')}
-          {line(geo.halfway, 0.2, 'h')}
-          {line(geo.leftBox, 0.38, 'lb')}
-          {line(geo.rightBox, 0.38, 'rb')}
-          {line(geo.leftArc, 0.52, 'la')}
-          {line(geo.rightArc, 0.52, 'ra')}
-
-          {/* centre spot — fades as the ball covers it */}
-          <motion.circle cx={geo.cx} cy={geo.cy} r={geo.spotR} fill={GOLD}
-            initial={{ opacity: 0, scale: 0.4 }}
-            animate={{ opacity: drawn ? 1 : 0, scale: drawn ? 1 : 0.4 }}
-            transition={{ duration: 0.4, delay: drawn ? 0.45 : 0 }}
-            style={{ transformOrigin: `${geo.cx}px ${geo.cy}px` }} />
-
-          {/* centre circle — becomes the gold ring of the "0" */}
-          <motion.circle cx={geo.cx} cy={geo.cy} fill="none" stroke={GOLD}
-            strokeWidth={Math.max(2, geo.d * 0.05)} strokeLinecap="round"
-            initial={{ pathLength: 0, opacity: 0, r: geo.R0 }}
-            animate={
-              stage === 'hidden' || stage === 'rest' ? { pathLength: 0, opacity: 0, r: geo.R0 }
-              : stage === 'land' ? { pathLength: 1, opacity: 1, r: [geo.R0, geo.R0 * 0.94, geo.R0] }
-              : gone ? { pathLength: 1, opacity: fadeOut ? 0 : 0.85, r: geo.rEnd }
-              : { pathLength: 1, opacity: 1, r: geo.R0 }
-            }
-            transition={
-              stage === 'land' ? { r: { duration: 0.32, ease: 'easeOut' } }
-              : gone ? { r: { duration: 0.62, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: fadeOut ? 0.5 : 0.4 } }
-              : { pathLength: { duration: 0.95, delay: 0.4, ease: 'easeInOut' }, opacity: { duration: 0.3, delay: 0.4 } }
-            } />
-        </svg>
-      )}
+      <div className="ls-vignette" />
 
       {/* exact hero lockup, white angular BrandText (revealed around the ball) */}
       <motion.div ref={title} className="hero-title" style={titleStyle}
         animate={{ opacity: showTitle ? 1 : 0 }}
-        transition={{ duration: 1.0, delay: stage === 'morph' ? 0.18 : 0, ease: 'easeInOut' }}>
+        transition={{ duration: 1.0, delay: stage === 'settle' ? 0.15 : 0, ease: 'easeInOut' }}>
         <div className="hero-kicker">FIFA WORLD CUP</div>
         <BrandText text="2026" className="hero-brand-year" useBallForZero={true} />
         <BrandText text="USA · CANADA · MEXICO" className="hero-brand-hosts" />
       </motion.div>
 
-      {/* landing pulse (under the ball) — matches the "0" rounded-square shape */}
-      <motion.div ref={pulse}
-        style={{ position: 'absolute', borderRadius: '20%', border: `3px solid ${GOLD}`, opacity: 0, pointerEvents: 'none' }}
-        animate={stage === 'land' ? { scale: [0.5, 2.3], opacity: [0.55, 0] } : { opacity: 0 }}
+      {/* impact shockwave at the "0" */}
+      <motion.div ref={shock}
+        style={{ position: 'absolute', borderRadius: '50%', border: `3px solid ${GOLD}`, opacity: 0, pointerEvents: 'none' }}
+        animate={stage === 'whip' ? { scale: [0.4, 2.6], opacity: [0.6, 0] } : { opacity: 0 }}
         transition={{ duration: 0.7, ease: 'easeOut' }} />
 
-      {/* the ball — drops onto the centre spot, then rests as the "0" */}
+      {/* the ball — struck from below into the net, then rests as the "0" */}
       <motion.div ref={ball}
         style={{ position: 'absolute', willChange: 'transform', pointerEvents: 'none' }}
-        initial={{ y: geo ? geo.dropFrom : -600, opacity: 0, rotate: -180, scale: 1 }}
+        initial={{ y: geo ? geo.belowOffset : 800, opacity: 0, rotate: 220, scale: 1 }}
         animate={
-          stage === 'rest' ? { y: 0, opacity: 1, rotate: 0, scale: 1 }
-          : dropped ? { y: 0, opacity: 1, rotate: 0, scale: stage === 'land' ? [1, 0.9, 1.05, 1] : 1 }
-          : { y: geo ? geo.dropFrom : -600, opacity: 0, rotate: -180, scale: 1 }
+          ballShot ? { y: 0, opacity: 1, rotate: 0, scale: stage === 'whip' ? [1, 1.08, 0.96, 1] : 1 }
+          : { y: geo ? geo.belowOffset : 800, opacity: 0, rotate: 220, scale: 1 }
         }
         transition={{
-          y: { type: 'spring', stiffness: 260, damping: 14, mass: 1.1 },
-          rotate: { duration: 0.95, ease: [0.16, 1, 0.3, 1] },
-          opacity: { duration: 0.2 },
-          scale: { duration: 0.4, ease: 'easeOut' },
+          y: { type: 'spring', stiffness: 540, damping: 15, mass: 0.8 },
+          rotate: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+          opacity: { duration: 0.12 },
+          scale: { duration: 0.45, ease: 'easeOut' },
         }}>
         <svg viewBox="0 0 100 100" style={{ display: 'block', width: '100%', height: '100%', filter: 'drop-shadow(0 8px 18px rgba(8,18,40,0.55))' }}>
           <defs>
