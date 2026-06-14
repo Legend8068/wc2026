@@ -71,6 +71,14 @@ function LoadingScreen({ onDone }) {
     H = W / RATIO;
     const L = scx - W / 2, R = scx + W / 2, Tp = cy - H / 2, B = cy + H / 2;
 
+    // Guard against degenerate measurements (e.g. a hero that isn't laid out
+    // yet, or zero-sized glyphs): fall back to the simple reveal rather than
+    // rendering an empty scene.
+    if (![d, cx, cy, vw, vh, W, H].every(Number.isFinite) || d < 6 || W < 120 || H < 70) {
+      setGeo({ ok: false });
+      return;
+    }
+
     const NS = 16, sw = W / NS;
     const stripeRects = Array.from({ length: NS }, (_, i) => ({ x: L + i * sw, w: sw, fill: i % 2 ? G_LIGHT : G_DARK }));
     const stripeLines = Array.from({ length: NS - 1 }, (_, i) => `M ${L + (i + 1) * sw} ${Tp} L ${L + (i + 1) * sw} ${B}`);
@@ -136,6 +144,19 @@ function LoadingScreen({ onDone }) {
     at(T.end, finish);
     return () => { cancelled = true; clearTimeout(failsafe); timers.forEach(clearTimeout); document.body.style.overflow = ''; };
   }, [geo, onDone]);
+
+  // Absolute safety net: on mount, guarantee the loader hands off within a
+  // fixed window no matter what (measurement failure, animation stall, a tab
+  // that was backgrounded, etc.) — it can never trap the user on a blank screen.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (finished.current) return;
+      finished.current = true;
+      document.body.style.overflow = '';
+      onDone?.();
+    }, 9000);
+    return () => clearTimeout(t);
+  }, [onDone]);
 
   const titleStyle = pos && pos.left != null
     ? { position: 'absolute', left: pos.left, top: pos.top, width: 'max-content', opacity: 0 }
