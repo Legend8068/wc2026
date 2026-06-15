@@ -72,28 +72,20 @@ function LoadingScreen({ onDone }) {
     const W = vw, H = vh;
     const L = 0, R = vw, Tp = 0, B = vh;
 
-    const goalW = vw * 1.4;
-    const goalH = goalW / RATIO;
+    // ---- GOAL (front-on net) centred on the screen but WIDE enough to contain
+    // the ball's landing "0" (cx, cy); vertically centred on cy so the ball
+    // strikes the middle of the net. Proper goal proportions + a sagging mesh.
+    const gW = Math.min(vw * 0.94, Math.max(vw * 0.52, 2 * Math.abs(scx - cx) + d * 6));
+    const gHh = gW / 2.5;
+    const gL = scx - gW / 2, gR = scx + gW / 2, gT = cy - gHh / 2, gB = cy + gHh / 2;
 
-    const pB = cy + goalH * 0.4;
-    const pTp = cy - goalH * 0.15;
-    const gH = goalH * 0.8; // Taller goal
-    const botScale = 0.85;
-    const topScale = 0.6;
-    const pL_bot = scx - goalW/2 * botScale;
-    const pR_bot = scx + goalW/2 * botScale;
-    const pL_top = scx - goalW/2 * topScale;
-    const pR_top = scx + goalW/2 * topScale;
-
-    // Pitch boundary (floor)
+    // interior floor + gold frame (posts + crossbar + goal line)
     const floor_0 = `M ${L} ${B} L ${L} ${Tp} L ${R} ${Tp} L ${R} ${B} Z`;
-    const floor_1 = `M ${pL_bot} ${pB} L ${pL_top} ${pTp} L ${pR_top} ${pTp} L ${pR_bot} ${pB} Z`;
-
-    // Goal Frame
+    const floor_1 = `M ${gL} ${gB} L ${gL} ${gT} L ${gR} ${gT} L ${gR} ${gB} Z`;
     const frame_0 = `M ${L} ${B} L ${L} ${Tp} L ${R} ${Tp} L ${R} ${B}`;
-    const frame_1 = `M ${pL_bot} ${pB} L ${pL_bot} ${pB - gH} L ${pR_bot} ${pB - gH} L ${pR_bot} ${pB}`;
+    const frame_1 = `M ${gL} ${gB} L ${gL} ${gT} L ${gR} ${gT} L ${gR} ${gB}`;
 
-    const NS = 16, sw = W / NS;
+    const NS = 18, sw = W / NS;
     const stripeStart = -12;
     const stripeEnd = NS + 12;
     const stripe_Tp = -vh;
@@ -104,9 +96,8 @@ function LoadingScreen({ onDone }) {
       const x1 = L + (i + 1) * sw;
       const d0 = `M ${x0} ${stripe_B} L ${x0} ${stripe_Tp} L ${x1} ${stripe_Tp} L ${x1} ${stripe_B} Z`;
       const f0 = i / NS, f1 = (i + 1) / NS;
-      const b0 = pL_bot + f0 * (pR_bot - pL_bot), b1 = pL_bot + f1 * (pR_bot - pL_bot);
-      const t0 = pL_top + f0 * (pR_top - pL_top), t1 = pL_top + f1 * (pR_top - pL_top);
-      const d1 = `M ${b0} ${pB} L ${t0} ${pTp} L ${t1} ${pTp} L ${b1} ${pB} Z`;
+      const b0 = gL + f0 * gW, b1 = gL + f1 * gW;
+      const d1 = `M ${b0} ${gB} L ${b0} ${gT} L ${b1} ${gT} L ${b1} ${gB} Z`;
       const fill = ((i % 2) + 2) % 2 === 1 ? G_LIGHT : G_DARK;
       stripeRects.push({ d0, d1, fill });
     }
@@ -114,36 +105,21 @@ function LoadingScreen({ onDone }) {
     const verts = Array.from({ length: NS - 1 }, (_, i) => {
       const f = (i + 1) / NS;
       const x0 = L + f * W;
-      // d0: Top edge (Tp) to Bottom edge (B)
       const d0 = `M ${x0} ${Tp} Q ${x0} ${pcy} ${x0} ${B}`;
-      const cx1 = pL_bot + f * (pR_bot - pL_bot);
-      const bx1 = pL_top + f * (pR_top - pL_top);
-      // Proper net sagging control point
-      const cy_ctrl = (pB - gH + pTp) / 2 + goalH * 0.15;
-      const cx_ctrl = (cx1 + bx1) / 2;
-      // d1: Crossbar (pB - gH) to Back floor (pTp).
-      // This means Top edge morphs to Crossbar, and Bottom edge morphs to Back floor (draping backwards).
-      const d1 = `M ${cx1} ${pB - gH} Q ${cx_ctrl} ${cy_ctrl} ${bx1} ${pTp}`;
+      const xg = gL + f * gW;
+      const belly = (0.5 - Math.abs(f - 0.5)) * gW * 0.05;
+      const d1 = `M ${xg} ${gT} Q ${xg + belly} ${cy} ${xg} ${gB}`;
       return { d0, d1 };
     });
 
-    const NH = 9;
+    const NH = 12;
     const horizs = Array.from({ length: NH - 1 }, (_, i) => {
       const t = (i + 1) / NH;
-      const y0 = B - t * H; // t=0 is B, t=1 is Tp
+      const y0 = B - t * H;
       const d0 = `M ${L} ${y0} Q ${scx} ${y0} ${R} ${y0}`;
-      const eval_q = (p0, p1, p2, t) => (1-t)**2 * p0 + 2*(1-t)*t * p1 + t**2 * p2;
-      const cy_ctrl = (pB - gH + pTp) / 2 + goalH * 0.15;
-      
-      // Map B (t=0) to Back floor (t_inv=1), and Tp (t=1) to Crossbar (t_inv=0)
-      const t_inv = 1 - t;
-      const lx = eval_q(pL_bot, (pL_bot + pL_top)/2, pL_top, t_inv);
-      const ly = eval_q(pB - gH, cy_ctrl, pTp, t_inv);
-      const rx = eval_q(pR_bot, (pR_bot + pR_top)/2, pR_top, t_inv);
-      const ry = eval_q(pB - gH, cy_ctrl, pTp, t_inv);
-      const mx = eval_q(scx, scx, scx, t_inv);
-      const my = eval_q(pB - gH, cy_ctrl, pTp, t_inv);
-      const d1 = `M ${lx} ${ly} Q ${mx} ${my} ${rx} ${ry}`;
+      const yg = gT + t * gHh;
+      const sag = gHh * 0.06 * (0.3 + 0.7 * t);
+      const d1 = `M ${gL} ${yg} Q ${scx} ${yg + sag} ${gR} ${yg}`;
       return { d0, d1 };
     });
 
@@ -323,12 +299,12 @@ function LoadingScreen({ onDone }) {
             {geo.horizs.map((h, i) => horizLine(h.d0, h.d1, 0.12 + i * 0.03, `h${i}`))}
           </motion.g>
 
-          {/* impact golden ripples (added as requested in reference image) */}
-          <motion.circle cx={geo.cx} cy={geo.cy - geo.d * 0.4} fill="none" stroke={GOLD} strokeWidth={frameThin}
+          {/* impact golden ripples — centred on the ball where it hits the net */}
+          <motion.circle cx={geo.cx} cy={geo.cy} fill="none" stroke={GOLD} strokeWidth={frameThin}
             initial={{ r: 0, opacity: 0 }}
             animate={stage === 'whip' ? { r: [0, geo.d * 3], opacity: [0.8, 0] } : { r: 0, opacity: 0 }}
             transition={{ duration: 0.9, ease: 'easeOut' }} />
-          <motion.circle cx={geo.cx} cy={geo.cy - geo.d * 0.4} fill="none" stroke={GOLD} strokeWidth={frameThin * 0.5}
+          <motion.circle cx={geo.cx} cy={geo.cy} fill="none" stroke={GOLD} strokeWidth={frameThin * 0.5}
             initial={{ r: 0, opacity: 0 }}
             animate={stage === 'whip' ? { r: [0, geo.d * 2.2], opacity: [0.6, 0] } : { r: 0, opacity: 0 }}
             transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }} />
