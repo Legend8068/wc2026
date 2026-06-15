@@ -60,10 +60,6 @@ function LoadingScreen({ onDone }) {
 
     const vw = window.innerWidth, vh = window.innerHeight, scx = vw / 2;
 
-    // ---- ONE shared rectangle, centred on (scx, cy), used for BOTH the
-    // top-down pitch and the front-on goal so the morph happens in place.
-    
-    const RATIO = 1.85;
     // The pitch + its markings cover the WHOLE page (centred on the screen), so
     // it reads as one full-bleed field instead of a small framed box sitting
     // inside the green. Markings reference the pitch centre (pcy); the goal and
@@ -75,15 +71,30 @@ function LoadingScreen({ onDone }) {
     // ---- GOAL (front-on net) centred on the screen but WIDE enough to contain
     // the ball's landing "0" (cx, cy); vertically centred on cy so the ball
     // strikes the middle of the net. Proper goal proportions + a sagging mesh.
-    const gW = Math.min(vw * 0.94, Math.max(vw * 0.52, 2 * Math.abs(scx - cx) + d * 6));
-    const gHh = gW / 2.5;
-    const gL = scx - gW / 2, gR = scx + gW / 2, gT = cy - gHh / 2, gB = cy + gHh / 2;
+    // ---- GOAL: one-point-perspective net that funnels back toward the point
+    // where the ball strikes (the "0"). A big gold front mouth + a smaller back
+    // frame at the vanishing point, so you look INTO the goal and the net
+    // drapes away with depth (the ribs run front→back, the rings cross them).
+    const fitW = 2 * Math.min(cx, vw - cx) * 0.94;
+    const fitH = 2 * Math.min(cy, vh - cy) * 0.82;
+    const gW = Math.min(vw * 0.7, fitW, fitH * 2.3);
+    const gHh = gW / 2.3;
+    const fL = cx - gW / 2, fR = cx + gW / 2, fT = cy - gHh / 2, fB = cy + gHh / 2;
+    const vpx = cx, vpy = cy;             // vanishing point = ball impact; the net funnels to it
+    const kS = 0.4;                       // back-frame size relative to the mouth
+    const kL = vpx + (fL - vpx) * kS, kR = vpx + (fR - vpx) * kS;
+    const kT = vpy + (fT - vpy) * kS, kB = vpy + (fB - vpy) * kS;
+    const qx = (a, b, c, t) => (1 - t) * (1 - t) * a + 2 * (1 - t) * t * b + t * t * c;
 
-    // interior floor + gold frame (posts + crossbar + goal line)
     const floor_0 = `M ${L} ${B} L ${L} ${Tp} L ${R} ${Tp} L ${R} ${B} Z`;
-    const floor_1 = `M ${gL} ${gB} L ${gL} ${gT} L ${gR} ${gT} L ${gR} ${gB} Z`;
+    const floor_1 = `M ${fL} ${fB} L ${fL} ${fT} L ${fR} ${fT} L ${fR} ${fB} Z`;
     const frame_0 = `M ${L} ${B} L ${L} ${Tp} L ${R} ${Tp} L ${R} ${B}`;
-    const frame_1 = `M ${gL} ${gB} L ${gL} ${gT} L ${gR} ${gT} L ${gR} ${gB}`;
+    const frame_1 = `M ${fL} ${fB} L ${fL} ${fT} L ${fR} ${fT} L ${fR} ${fB}`;
+    const backFrame = `M ${kL} ${kB} L ${kL} ${kT} L ${kR} ${kT} L ${kR} ${kB} Z`;
+    const connectors = [
+      `M ${fL} ${fT} L ${kL} ${kT}`, `M ${fR} ${fT} L ${kR} ${kT}`,
+      `M ${fL} ${fB} L ${kL} ${kB}`, `M ${fR} ${fB} L ${kR} ${kB}`,
+    ];
 
     const NS = 18, sw = W / NS;
     const stripeStart = -12;
@@ -96,31 +107,39 @@ function LoadingScreen({ onDone }) {
       const x1 = L + (i + 1) * sw;
       const d0 = `M ${x0} ${stripe_B} L ${x0} ${stripe_Tp} L ${x1} ${stripe_Tp} L ${x1} ${stripe_B} Z`;
       const f0 = i / NS, f1 = (i + 1) / NS;
-      const b0 = gL + f0 * gW, b1 = gL + f1 * gW;
-      const d1 = `M ${b0} ${gB} L ${b0} ${gT} L ${b1} ${gT} L ${b1} ${gB} Z`;
+      const b0 = fL + f0 * gW, b1 = fL + f1 * gW;
+      const d1 = `M ${b0} ${fB} L ${b0} ${fT} L ${b1} ${fT} L ${b1} ${fB} Z`;
       const fill = ((i % 2) + 2) % 2 === 1 ? G_LIGHT : G_DARK;
       stripeRects.push({ d0, d1, fill });
     }
 
+    // ribs: pitch verticals -> net ropes that drape front-bottom → back-top
     const verts = Array.from({ length: NS - 1 }, (_, i) => {
       const f = (i + 1) / NS;
       const x0 = L + f * W;
       const d0 = `M ${x0} ${Tp} Q ${x0} ${pcy} ${x0} ${B}`;
-      const xg = gL + f * gW;
-      const belly = (0.5 - Math.abs(f - 0.5)) * gW * 0.05;
-      const d1 = `M ${xg} ${gT} Q ${xg + belly} ${cy} ${xg} ${gB}`;
+      const fx = fL + f * gW, kx = kL + f * (kR - kL);
+      const d1 = `M ${fx} ${fB} Q ${kx} ${kB} ${kx} ${kT}`;
       return { d0, d1 };
     });
 
-    const NH = 12;
+    // rings: pitch horizontals -> rows crossing the ribs at increasing depth
+    const NH = 11;
     const horizs = Array.from({ length: NH - 1 }, (_, i) => {
       const t = (i + 1) / NH;
       const y0 = B - t * H;
       const d0 = `M ${L} ${y0} Q ${scx} ${y0} ${R} ${y0}`;
-      const yg = gT + t * gHh;
-      const sag = gHh * 0.06 * (0.3 + 0.7 * t);
-      const d1 = `M ${gL} ${yg} Q ${scx} ${yg + sag} ${gR} ${yg}`;
+      const ly = qx(fB, kB, kT, t), my = qx(fB, kB, kT, t);
+      const lx = qx(fL, kL, kL, t), rx = qx(fR, kR, kR, t), mx = qx(scx, vpx, vpx, t);
+      const d1 = `M ${lx} ${ly} Q ${mx} ${my} ${rx} ${ly}`;
       return { d0, d1 };
+    });
+
+    // top-net ribs: the net draping back over the crossbar (goal-only)
+    const topRibs = Array.from({ length: NS - 1 }, (_, i) => {
+      const f = (i + 1) / NS;
+      const fx = fL + f * gW, kx = kL + f * (kR - kL);
+      return `M ${fx} ${fT} L ${kx} ${kT}`;
     });
 
     // Tie markings strictly to W and H so they never float detached
@@ -132,6 +151,7 @@ function LoadingScreen({ onDone }) {
     setGeo({
       ok: true, vw, vh, cx, cy, d, scx, L, R, Tp, B, W, H,
       floor_0, floor_1, frame_0, frame_1, stripeRects, verts, horizs,
+      backFrame, connectors, topRibs,
       ccR, cc: { x: scx, y: pcy },
       spots: [{ x: scx, y: pcy }, { x: sxL, y: pcy }, { x: R - W * 0.11, y: pcy }],
       leftPen: `M ${L} ${pcy - penW / 2} H ${L + penD} V ${pcy + penW / 2} H ${L}`,
@@ -297,7 +317,25 @@ function LoadingScreen({ onDone }) {
             style={{ transformOrigin: `${geo.cx}px ${geo.cy}px` }}>
             {geo.verts.map((v, i) => vertLine(v.d0, v.d1, 0.12 + i * 0.03, `v${i}`))}
             {geo.horizs.map((h, i) => horizLine(h.d0, h.d1, 0.12 + i * 0.03, `h${i}`))}
+            {geo.topRibs.map((d, i) => (
+              <motion.path key={`tr${i}`} d={d} fill="none" stroke={NET} strokeWidth={netW} strokeLinecap="round" strokeLinejoin="round"
+                initial={{ opacity: 0, pathLength: 0 }}
+                animate={{ opacity: inGoal ? 0.55 : 0, pathLength: inGoal ? 1 : 0 }}
+                transition={{ opacity: { duration: 0.4, delay: 0.14 + i * 0.02 }, pathLength: { duration: 0.6, delay: 0.14 + i * 0.02, ease: 'easeInOut' } }} />
+            ))}
           </motion.g>
+
+          {/* back frame + depth edges — the goal's perspective depth */}
+          <motion.path d={geo.backFrame} fill="none" stroke={GOLD} strokeLinecap="round" strokeLinejoin="round" strokeWidth={frameThin}
+            initial={{ opacity: 0, pathLength: 0 }}
+            animate={{ opacity: inGoal ? 0.9 : 0, pathLength: inGoal ? 1 : 0 }}
+            transition={{ opacity: { duration: 0.4, delay: 0.15 }, pathLength: { duration: 0.7, delay: 0.15, ease: 'easeInOut' } }} />
+          {geo.connectors.map((d, i) => (
+            <motion.path key={`c${i}`} d={d} fill="none" stroke={GOLD} strokeLinecap="round" strokeWidth={frameThin}
+              initial={{ opacity: 0, pathLength: 0 }}
+              animate={{ opacity: inGoal ? 0.75 : 0, pathLength: inGoal ? 1 : 0 }}
+              transition={{ opacity: { duration: 0.4, delay: 0.18 }, pathLength: { duration: 0.6, delay: 0.18, ease: 'easeInOut' } }} />
+          ))}
 
           {/* impact golden ripples — centred on the ball where it hits the net */}
           <motion.circle cx={geo.cx} cy={geo.cy} fill="none" stroke={GOLD} strokeWidth={frameThin}
