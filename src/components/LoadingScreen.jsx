@@ -62,58 +62,108 @@ function LoadingScreen({ onDone }) {
 
     // ---- ONE shared rectangle, centred on (scx, cy), used for BOTH the
     // top-down pitch and the front-on goal so the morph happens in place.
+    
     const RATIO = 1.85;
-    const bUpFrac = 0.16; // top-net depth as a fraction of H (kept on-screen)
-    let W = Math.min(vw * 0.84, 1180);
-    let H = W / RATIO;
-    H = Math.min(H, (cy - 16) / (0.5 + bUpFrac), (vh - cy - 16) / 0.5, vh * 0.6);
-    W = Math.min(H * RATIO, vw * 0.84);
-    H = W / RATIO;
-    const L = scx - W / 2, R = scx + W / 2, Tp = cy - H / 2, B = cy + H / 2;
+    // The pitch + its markings cover the WHOLE page (centred on the screen), so
+    // it reads as one full-bleed field instead of a small framed box sitting
+    // inside the green. Markings reference the pitch centre (pcy); the goal and
+    // ball still resolve to the "0" (cy).
+    const pcy = vh / 2;
+    const W = vw, H = vh;
+    const L = 0, R = vw, Tp = 0, B = vh;
 
-    // Guard against degenerate measurements (e.g. a hero that isn't laid out
-    // yet, or zero-sized glyphs): fall back to the simple reveal rather than
-    // rendering an empty scene.
-    if (![d, cx, cy, vw, vh, W, H].every(Number.isFinite) || d < 6 || W < 120 || H < 70) {
-      setGeo({ ok: false });
-      return;
-    }
+    const goalW = vw * 1.4;
+    const goalH = goalW / RATIO;
+
+    const pB = cy + goalH * 0.4;
+    const pTp = cy - goalH * 0.15;
+    const gH = goalH * 0.8; // Taller goal
+    const botScale = 0.85;
+    const topScale = 0.6;
+    const pL_bot = scx - goalW/2 * botScale;
+    const pR_bot = scx + goalW/2 * botScale;
+    const pL_top = scx - goalW/2 * topScale;
+    const pR_top = scx + goalW/2 * topScale;
+
+    // Pitch boundary (floor)
+    const floor_0 = `M ${L} ${B} L ${L} ${Tp} L ${R} ${Tp} L ${R} ${B} Z`;
+    const floor_1 = `M ${pL_bot} ${pB} L ${pL_top} ${pTp} L ${pR_top} ${pTp} L ${pR_bot} ${pB} Z`;
+
+    // Goal Frame
+    const frame_0 = `M ${L} ${B} L ${L} ${Tp} L ${R} ${Tp} L ${R} ${B}`;
+    const frame_1 = `M ${pL_bot} ${pB} L ${pL_bot} ${pB - gH} L ${pR_bot} ${pB - gH} L ${pR_bot} ${pB}`;
 
     const NS = 16, sw = W / NS;
-    const stripeRects = Array.from({ length: NS }, (_, i) => ({ x: L + i * sw, w: sw, fill: i % 2 ? G_LIGHT : G_DARK }));
-    const stripeLines = Array.from({ length: NS - 1 }, (_, i) => `M ${L + (i + 1) * sw} ${Tp} L ${L + (i + 1) * sw} ${B}`);
+    const stripeStart = -12;
+    const stripeEnd = NS + 12;
+    const stripe_Tp = -vh;
+    const stripe_B = vh * 2;
+    const stripeRects = [];
+    for (let i = stripeStart; i < stripeEnd; i++) {
+      const x0 = L + i * sw;
+      const x1 = L + (i + 1) * sw;
+      const d0 = `M ${x0} ${stripe_B} L ${x0} ${stripe_Tp} L ${x1} ${stripe_Tp} L ${x1} ${stripe_B} Z`;
+      const f0 = i / NS, f1 = (i + 1) / NS;
+      const b0 = pL_bot + f0 * (pR_bot - pL_bot), b1 = pL_bot + f1 * (pR_bot - pL_bot);
+      const t0 = pL_top + f0 * (pR_top - pL_top), t1 = pL_top + f1 * (pR_top - pL_top);
+      const d1 = `M ${b0} ${pB} L ${t0} ${pTp} L ${t1} ${pTp} L ${b1} ${pB} Z`;
+      const fill = ((i % 2) + 2) % 2 === 1 ? G_LIGHT : G_DARK;
+      stripeRects.push({ d0, d1, fill });
+    }
 
+    const verts = Array.from({ length: NS - 1 }, (_, i) => {
+      const f = (i + 1) / NS;
+      const x0 = L + f * W;
+      // d0: Top edge (Tp) to Bottom edge (B)
+      const d0 = `M ${x0} ${Tp} Q ${x0} ${pcy} ${x0} ${B}`;
+      const cx1 = pL_bot + f * (pR_bot - pL_bot);
+      const bx1 = pL_top + f * (pR_top - pL_top);
+      // Proper net sagging control point
+      const cy_ctrl = (pB - gH + pTp) / 2 + goalH * 0.15;
+      const cx_ctrl = (cx1 + bx1) / 2;
+      // d1: Crossbar (pB - gH) to Back floor (pTp).
+      // This means Top edge morphs to Crossbar, and Bottom edge morphs to Back floor (draping backwards).
+      const d1 = `M ${cx1} ${pB - gH} Q ${cx_ctrl} ${cy_ctrl} ${bx1} ${pTp}`;
+      return { d0, d1 };
+    });
+
+    const NH = 9;
+    const horizs = Array.from({ length: NH - 1 }, (_, i) => {
+      const t = (i + 1) / NH;
+      const y0 = B - t * H; // t=0 is B, t=1 is Tp
+      const d0 = `M ${L} ${y0} Q ${scx} ${y0} ${R} ${y0}`;
+      const eval_q = (p0, p1, p2, t) => (1-t)**2 * p0 + 2*(1-t)*t * p1 + t**2 * p2;
+      const cy_ctrl = (pB - gH + pTp) / 2 + goalH * 0.15;
+      
+      // Map B (t=0) to Back floor (t_inv=1), and Tp (t=1) to Crossbar (t_inv=0)
+      const t_inv = 1 - t;
+      const lx = eval_q(pL_bot, (pL_bot + pL_top)/2, pL_top, t_inv);
+      const ly = eval_q(pB - gH, cy_ctrl, pTp, t_inv);
+      const rx = eval_q(pR_bot, (pR_bot + pR_top)/2, pR_top, t_inv);
+      const ry = eval_q(pB - gH, cy_ctrl, pTp, t_inv);
+      const mx = eval_q(scx, scx, scx, t_inv);
+      const my = eval_q(pB - gH, cy_ctrl, pTp, t_inv);
+      const d1 = `M ${lx} ${ly} Q ${mx} ${my} ${rx} ${ry}`;
+      return { d0, d1 };
+    });
+
+    // Tie markings strictly to W and H so they never float detached
     const penD = W * 0.16, penW = H * 0.6, gbD = W * 0.058, gbW = H * 0.27;
     const rA = W * 0.09, sxL = L + W * 0.11, dxL = (L + penD) - sxL;
     const hA = dxL < rA ? Math.sqrt(rA * rA - dxL * dxL) : rA * 0.6;
     const ccR = H * 0.135;
 
-    const NH = 9, bIn = W * 0.045, bUp = H * bUpFrac;
-
     setGeo({
       ok: true, vw, vh, cx, cy, d, scx, L, R, Tp, B, W, H,
-      stripeRects, stripeLines,
-      boundary: `M ${L} ${Tp} H ${R} V ${B} H ${L} Z`,
-      ccR, cc: { x: scx, y: cy },
-      spots: [{ x: scx, y: cy }, { x: sxL, y: cy }, { x: R - W * 0.11, y: cy }],
-      leftPen: `M ${L} ${cy - penW / 2} H ${L + penD} V ${cy + penW / 2} H ${L}`,
-      rightPen: `M ${R} ${cy - penW / 2} H ${R - penD} V ${cy + penW / 2} H ${R}`,
-      leftGoalB: `M ${L} ${cy - gbW / 2} H ${L + gbD} V ${cy + gbW / 2} H ${L}`,
-      rightGoalB: `M ${R} ${cy - gbW / 2} H ${R - gbD} V ${cy + gbW / 2} H ${R}`,
-      leftArc: `M ${L + penD} ${cy - hA} A ${rA} ${rA} 0 0 1 ${L + penD} ${cy + hA}`,
-      rightArc: `M ${R - penD} ${cy - hA} A ${rA} ${rA} 0 0 0 ${R - penD} ${cy + hA}`,
-      // net horizontals (sagging) for the goal — verticals reuse the stripe lines
-      netH: Array.from({ length: NH - 1 }, (_, i) => {
-        const f = (i + 1) / NH, y = Tp + H * f, sag = H * 0.045 * (0.35 + 0.65 * f);
-        return `M ${L} ${y} Q ${scx} ${y + sag} ${R} ${y}`;
-      }),
-      // gentle top-net depth (the net drapes back over the crossbar)
-      topNet: [
-        `M ${L} ${Tp} L ${L + bIn} ${Tp - bUp}`,
-        `M ${R} ${Tp} L ${R - bIn} ${Tp - bUp}`,
-        `M ${L + bIn} ${Tp - bUp} L ${R - bIn} ${Tp - bUp}`,
-        ...Array.from({ length: 6 }, (_, i) => { const x = L + W * (i + 1) / 7; const xb = L + bIn + (W - 2 * bIn) * (i + 1) / 7; return `M ${x} ${Tp} L ${xb} ${Tp - bUp}`; }),
-      ],
+      floor_0, floor_1, frame_0, frame_1, stripeRects, verts, horizs,
+      ccR, cc: { x: scx, y: pcy },
+      spots: [{ x: scx, y: pcy }, { x: sxL, y: pcy }, { x: R - W * 0.11, y: pcy }],
+      leftPen: `M ${L} ${pcy - penW / 2} H ${L + penD} V ${pcy + penW / 2} H ${L}`,
+      rightPen: `M ${R} ${pcy - penW / 2} H ${R - penD} V ${pcy + penW / 2} H ${R}`,
+      leftGoalB: `M ${L} ${pcy - gbW / 2} H ${L + gbD} V ${pcy + gbW / 2} H ${L}`,
+      rightGoalB: `M ${R} ${pcy - gbW / 2} H ${R - gbD} V ${pcy + gbW / 2} H ${R}`,
+      leftArc: `M ${L + penD} ${pcy - hA} A ${rA} ${rA} 0 0 1 ${L + penD} ${pcy + hA}`,
+      rightArc: `M ${R - penD} ${pcy - hA} A ${rA} ${rA} 0 0 0 ${R - penD} ${pcy + hA}`,
       belowOffset: (vh - cy) + d * 2.5,
     });
   }, [pos]);
@@ -177,26 +227,25 @@ function LoadingScreen({ onDone }) {
   const frameThin = geo ? Math.max(1.6, geo.d * 0.04) : 2;
   const frameThick = geo ? Math.max(3, geo.d * 0.12) : 4;
 
-  // vertical stripe lines → persist as the net's verticals
-  const vertLine = (d, delay, key) => (
-    <motion.path key={key} d={d} fill="none" stroke={NET} strokeWidth={netW} strokeLinecap="round" strokeLinejoin="round"
-      initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: vertsOn ? 1 : 0, opacity: vertsOn ? 1 : 0 }}
-      transition={{ pathLength: { duration: 0.7, delay, ease: 'easeInOut' }, opacity: { duration: 0.3, delay } }} />
+  const vertLine = (d0, d1, delay, key) => (
+    <motion.path key={key} fill="none" stroke={NET} strokeWidth={netW} strokeLinecap="round" strokeLinejoin="round"
+      initial={{ d: d0, opacity: 0, pathLength: 0 }}
+      animate={{ d: inGoal ? d1 : d0, opacity: vertsOn ? 1 : 0, pathLength: vertsOn ? 1 : 0 }}
+      transition={{ d: { duration: 0.8, ease: 'easeInOut' }, opacity: { duration: 0.3, delay }, pathLength: { duration: 0.7, delay, ease: 'easeInOut' } }} />
   );
-  // pitch markings — draw on at 'marks', stay drawn but fade out as the goal forms
+  
+  const horizLine = (d0, d1, delay, key) => (
+    <motion.path key={key} fill="none" stroke={NET} strokeWidth={netW} strokeLinecap="round" strokeLinejoin="round"
+      initial={{ d: d0, opacity: 0, pathLength: 0 }}
+      animate={{ d: inGoal ? d1 : d0, opacity: inGoal ? 1 : 0, pathLength: inGoal ? 1 : 0 }}
+      transition={{ d: { duration: 0.8, ease: 'easeInOut' }, opacity: { duration: 0.4, delay }, pathLength: { duration: 0.6, delay, ease: 'easeInOut' } }} />
+  );
+
   const markLine = (d, delay, key) => (
     <motion.path key={key} d={d} fill="none" stroke={NET} strokeWidth={markW} strokeLinecap="round" strokeLinejoin="round"
       initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: (marksOn || inGoal) ? 1 : 0, opacity: marksOn ? 1 : 0 }}
-      transition={{ pathLength: { duration: 0.7, delay, ease: 'easeInOut' }, opacity: { duration: 0.4, delay } }} />
-  );
-  // goal-only net lines (sagging horizontals + top depth) — draw on as it morphs
-  const netLine = (d, w, delay, key) => (
-    <motion.path key={key} d={d} fill="none" stroke={NET} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"
-      initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: inGoal ? 1 : 0, opacity: inGoal ? 1 : 0 }}
-      transition={{ pathLength: { duration: 0.6, delay, ease: 'easeInOut' }, opacity: { duration: 0.4, delay } }} />
+      animate={{ pathLength: marksOn ? 1 : 0, opacity: marksOn && !inGoal ? 1 : 0 }}
+      transition={{ pathLength: { duration: 0.7, delay, ease: 'easeInOut' }, opacity: { duration: 0.25, delay } }} />
   );
 
   return (
@@ -219,34 +268,34 @@ function LoadingScreen({ onDone }) {
           animate={{ opacity: stage === 'hidden' ? 0 : fadeScene ? 0 : 1 }}
           transition={{ duration: fadeScene ? 0.7 : 0.4, ease: 'easeInOut' }}>
           <defs>
-            <clipPath id="ls-pitch-clip"><rect x={geo.L} y={geo.Tp} width={geo.W} height={geo.H} rx={Math.min(14, geo.d * 0.16)} /></clipPath>
             <radialGradient id="ls-goal-depth" cx="50%" cy="42%" r="80%">
               <stop offset="0%" stopColor="#0c1626" />
               <stop offset="100%" stopColor="#05080f" />
             </radialGradient>
+            <radialGradient id="ls-golden-ripple" cx="50%" cy="50%" r="50%">
+              <stop offset="70%" stopColor="transparent" />
+              <stop offset="90%" stopColor="#f5c542" />
+              <stop offset="100%" stopColor="transparent" />
+            </radialGradient>
           </defs>
 
-          {/* dark goal interior — revealed as the green fades (seamless crossfade) */}
-          <motion.rect x={geo.L} y={geo.Tp} width={geo.W} height={geo.H} rx={Math.min(14, geo.d * 0.16)} fill="url(#ls-goal-depth)"
-            initial={{ opacity: 0 }} animate={{ opacity: inGoal ? 0.95 : 0 }} transition={{ duration: 0.6, ease: 'easeInOut' }} />
+          {/* pitch floor morphs from rectangle to trapezoid */}
+          <motion.path 
+            fill="url(#ls-goal-depth)"
+            initial={{ d: geo.floor_0, opacity: 0 }} 
+            animate={{ d: inGoal ? geo.floor_1 : geo.floor_0, opacity: inGoal ? 0.95 : 0 }} 
+            transition={{ d: { duration: 0.8, ease: 'easeInOut' }, opacity: { duration: 0.6, ease: 'easeInOut' } }} />
 
-          {/* green mowing stripes (pitch) */}
-          <motion.g clipPath="url(#ls-pitch-clip)"
-            initial={{ opacity: 0 }} animate={{ opacity: greenOn ? 1 : 0 }} transition={{ duration: 0.55, ease: 'easeInOut' }}>
-            {geo.stripeRects.map((s, i) => (
-              <rect key={i} x={s.x} y={geo.Tp} width={s.w + 0.6} height={geo.H} fill={s.fill} />
-            ))}
-          </motion.g>
-
-          {/* NET group: stripe verticals persist as the net's verticals; the
-              sagging horizontals + top depth draw in for the goal. Flexes on impact. */}
+          {/* green mowing stripes (pitch) — morph to perspective and fade out */}
           <motion.g
-            animate={{ scale: stage === 'whip' ? [1, 1.02, 0.992, 1] : 1, y: stage === 'whip' ? [0, geo.d * 0.13, 0] : 0 }}
-            transition={{ duration: 0.55, ease: 'easeOut' }}
-            style={{ transformOrigin: `${geo.cx}px ${geo.cy}px` }}>
-            {geo.stripeLines.map((d, i) => vertLine(d, 0.12 + i * 0.03, `v${i}`))}
-            {geo.netH.map((d, i) => netLine(d, netW, 0.12 + i * 0.03, `h${i}`))}
-            {geo.topNet.map((d, i) => netLine(d, netW * 0.85, 0.18 + i * 0.02, `t${i}`))}
+            initial={{ opacity: 0 }} animate={{ opacity: greenOn ? 1 : 0 }} transition={{ duration: 0.25, ease: 'easeOut' }}>
+            {geo.stripeRects.map((s, i) => (
+              <motion.path key={i} fill={s.fill}
+                initial={{ d: s.d0 }}
+                animate={{ d: inGoal ? s.d1 : s.d0 }}
+                transition={{ duration: 0.8, ease: 'easeInOut' }}
+              />
+            ))}
           </motion.g>
 
           {/* pitch markings — draw on at 'marks', fade as the goal forms */}
@@ -258,18 +307,44 @@ function LoadingScreen({ onDone }) {
           {markLine(geo.rightArc, 0.35, 'ra')}
           <motion.circle cx={geo.cc.x} cy={geo.cc.y} r={geo.ccR} fill="none" stroke={NET} strokeWidth={markW}
             initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: (marksOn || inGoal) ? 1 : 0, opacity: marksOn ? 1 : 0 }}
-            transition={{ pathLength: { duration: 0.7, delay: 0.1, ease: 'easeInOut' }, opacity: { duration: 0.4, delay: 0.1 } }} />
+            animate={{ pathLength: marksOn ? 1 : 0, opacity: marksOn && !inGoal ? 1 : 0 }}
+            transition={{ pathLength: { duration: 0.7, delay: 0.1, ease: 'easeInOut' }, opacity: { duration: 0.25, delay: 0.1 } }} />
           {geo.spots.map((sp, i) => (
             <motion.circle key={i} cx={sp.x} cy={sp.y} r={Math.max(2, geo.d * 0.045)} fill={NET}
-              initial={{ opacity: 0 }} animate={{ opacity: marksOn ? 1 : 0 }} transition={{ duration: 0.35, delay: 0.25 }} />
+              initial={{ opacity: 0 }} animate={{ opacity: marksOn && !inGoal ? 1 : 0 }} transition={{ duration: 0.25, delay: 0.25 }} />
           ))}
 
-          {/* gold frame — thin pitch boundary thickens into posts + crossbar */}
-          <motion.path d={geo.boundary} fill="none" stroke={GOLD} strokeLinecap="round" strokeLinejoin="round"
+          {/* NET group: vertical and horizontal ropes morph into perspective net */}
+          <motion.g
+            animate={{ scale: stage === 'whip' ? [1, 1.02, 0.992, 1] : 1, y: stage === 'whip' ? [0, geo.d * 0.13, 0] : 0 }}
+            transition={{ duration: 0.55, ease: 'easeOut' }}
+            style={{ transformOrigin: `${geo.cx}px ${geo.cy}px` }}>
+            {geo.verts.map((v, i) => vertLine(v.d0, v.d1, 0.12 + i * 0.03, `v${i}`))}
+            {geo.horizs.map((h, i) => horizLine(h.d0, h.d1, 0.12 + i * 0.03, `h${i}`))}
+          </motion.g>
+
+          {/* impact golden ripples (added as requested in reference image) */}
+          <motion.circle cx={geo.cx} cy={geo.cy - geo.d * 0.4} fill="none" stroke={GOLD} strokeWidth={frameThin}
+            initial={{ r: 0, opacity: 0 }}
+            animate={stage === 'whip' ? { r: [0, geo.d * 3], opacity: [0.8, 0] } : { r: 0, opacity: 0 }}
+            transition={{ duration: 0.9, ease: 'easeOut' }} />
+          <motion.circle cx={geo.cx} cy={geo.cy - geo.d * 0.4} fill="none" stroke={GOLD} strokeWidth={frameThin * 0.5}
+            initial={{ r: 0, opacity: 0 }}
+            animate={stage === 'whip' ? { r: [0, geo.d * 2.2], opacity: [0.6, 0] } : { r: 0, opacity: 0 }}
+            transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }} />
+
+           {/* gold frame — morphs from pitch border to upright goal frame */}
+          <motion.path fill="none" stroke={GOLD} strokeLinecap="round" strokeLinejoin="round"
+            initial={{ d: geo.frame_0, pathLength: 0, opacity: 0, strokeWidth: frameThin }}
+            animate={{ d: inGoal ? geo.frame_1 : geo.frame_0, pathLength: (marksOn || inGoal) ? 1 : 0, opacity: (marksOn || inGoal) ? 1 : 0, strokeWidth: inGoal ? frameThick : frameThin }}
+            transition={{ d: { duration: 0.8, ease: 'easeInOut' }, pathLength: { duration: 0.8, ease: 'easeInOut' }, opacity: { duration: 0.35 }, strokeWidth: { duration: 0.7, ease: 'easeOut' } }} />
+
+          {/* gold frame bottom touchline — drawn during pitch phase and fades out */}
+          <motion.path fill="none" stroke={GOLD} strokeLinecap="round" strokeLinejoin="round"
             initial={{ pathLength: 0, opacity: 0, strokeWidth: frameThin }}
-            animate={{ pathLength: (marksOn || inGoal) ? 1 : 0, opacity: (marksOn || inGoal) ? 1 : 0, strokeWidth: inGoal ? frameThick : frameThin }}
-            transition={{ pathLength: { duration: 0.8, ease: 'easeInOut' }, opacity: { duration: 0.35 }, strokeWidth: { duration: 0.7, ease: 'easeOut' } }} />
+            animate={{ pathLength: (marksOn && !inGoal) ? 1 : 0, opacity: (marksOn && !inGoal) ? 1 : 0 }}
+            transition={{ pathLength: { duration: 0.8, ease: 'easeInOut' }, opacity: { duration: 0.25 } }}
+            d={`M ${geo.L} ${geo.B} L ${geo.R} ${geo.B}`} />
         </motion.svg>
       )}
 
