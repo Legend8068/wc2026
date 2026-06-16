@@ -1,0 +1,403 @@
+/* ============================================================================
+   Trionda story — cinematic scroll section.
+   Uses the site tokens from src/index.css (:root). No raw palette hexes here
+   except inside SVG/canvas where vars aren't available.
+   ============================================================================ */
+
+.tri {
+  position: relative;
+  background: var(--bg-deep);
+  color: var(--white);
+  font-family: var(--body);
+}
+
+/* the pinned stage — holds the 3D canvas + overlay copy */
+.tri-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.tri-canvas {
+  position: absolute !important;
+  inset: 0;
+  z-index: 1;
+}
+
+/* soft RGB aurora behind the ball */
+.tri-aurora {
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  background:
+    radial-gradient(40% 40% at 30% 35%, color-mix(in srgb, var(--blue) 40%, transparent), transparent 70%),
+    radial-gradient(40% 40% at 70% 40%, color-mix(in srgb, var(--red) 35%, transparent), transparent 70%),
+    radial-gradient(50% 50% at 50% 80%, color-mix(in srgb, var(--green) 30%, transparent), transparent 70%);
+  filter: blur(40px);
+  opacity: 0.5;
+  animation: tri-aurora-drift 24s ease-in-out infinite alternate;
+}
+@keyframes tri-aurora-drift {
+  from { transform: scale(1) translateY(0); }
+  to   { transform: scale(1.12) translateY(-3%); }
+}
+
+/* overlay copy sits above the canvas; captions stack and cross-fade */
+.tri-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+/* each caption is a full-stage flex layer; alignment classes place the inner
+   block opposite the docked ball. A one-sided scrim keeps text readable over
+   the 3D without tinting the ball's half. motion's transform stays free for y. */
+.tri-caption {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: clamp(1.25rem, 5vw, 5.5rem);
+}
+.tri-caption::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.tri-caption__inner { max-width: min(540px, 88vw); position: relative; }
+.tri-caption__inner * { pointer-events: auto; }
+
+.tri-center { justify-content: center; text-align: center; }
+.tri-center::before { background: radial-gradient(58% 50% at 50% 50%, rgba(7, 11, 18, 0.72), transparent 72%); }
+.tri-left   { justify-content: flex-start; }
+.tri-left::before { background: linear-gradient(90deg, rgba(7, 11, 18, 0.9) 0%, rgba(7, 11, 18, 0.55) 26%, transparent 56%); }
+.tri-right  { justify-content: flex-end; text-align: right; }
+.tri-right::before { background: linear-gradient(270deg, rgba(7, 11, 18, 0.9) 0%, rgba(7, 11, 18, 0.55) 26%, transparent 56%); }
+.tri-top    { align-items: flex-start; padding-top: clamp(4rem, 12vh, 9rem); }
+.tri-wide .tri-caption__inner { max-width: min(720px, 92vw); }
+
+/* hidden-triangle graphic (beat 2) */
+.tri-triangle { margin-top: 1.4rem; width: min(260px, 60vw); margin-left: auto; }
+.tri-right .tri-triangle { margin-left: auto; }
+.tri-left .tri-triangle { margin-left: 0; margin-right: auto; }
+.tri-triangle svg { width: 100%; height: auto; overflow: visible; }
+
+/* typography — Fredoka display, tight + monumental */
+.tri-kicker {
+  display: inline-block;
+  font-family: var(--head);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1rem;
+}
+.tri-display {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(2.2rem, 6vw, 4.6rem);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.tri-h3 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 4vw, 3rem);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.9rem;
+}
+.tri-sub { margin-top: 1.2rem; color: var(--muted); font-size: 1rem; letter-spacing: 0.06em; }
+.tri-body { color: color-mix(in srgb, var(--white) 82%, transparent); font-size: clamp(1rem, 1.6vw, 1.2rem); line-height: 1.5; }
+
+.g-red   { color: var(--red-light); }
+.g-green { color: var(--green); }
+.g-blue  { color: color-mix(in srgb, var(--blue) 70%, var(--white)); }
+
+/* RGB streams converging (step 2) */
+.tri-streams { position: relative; height: 60px; margin-top: 1.6rem; }
+.tri-streams .stream {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  border-radius: 99px;
+  transform-origin: left center;
+  filter: drop-shadow(0 0 8px currentColor);
+  animation: tri-stream 3.4s ease-in-out infinite;
+}
+.s-red   { color: var(--red-light);  background: linear-gradient(90deg, transparent, currentColor); --o: -16px; }
+.s-green { color: var(--green);      background: linear-gradient(90deg, transparent, currentColor); --o: 0px; }
+.s-blue  { color: var(--blue);       background: linear-gradient(90deg, transparent, currentColor); --o: 16px; }
+@keyframes tri-stream {
+  0%   { transform: translateY(var(--o)) scaleX(0.2); opacity: 0; }
+  50%  { transform: translateY(var(--o)) scaleX(1);   opacity: 1; }
+  100% { transform: translateY(0)        scaleX(1);   opacity: 0.6; }
+}
+
+/* panel-count morph (step 4) */
+.tri-morph { margin: 1.5rem 0; }
+.tri-morph-num {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+.tri-morph-num span {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(4rem, 14vw, 10rem);
+  color: var(--gold);
+  text-shadow: 0 0 40px color-mix(in srgb, var(--gold) 50%, transparent);
+}
+.tri-morph-num small {
+  font-family: var(--head);
+  letter-spacing: 0.4em;
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+}
+
+/* ——— Aerodynamics slider (step 5) ——— */
+.aero { margin-top: 1.6rem; width: min(680px, 92vw); }
+.aero__viz {
+  position: relative;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 10%, transparent);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+.aero__svg { width: 100%; height: auto; display: block; }
+.aero__readout {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--head);
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+}
+.aero__readout-panels { color: var(--muted); letter-spacing: 0.12em; }
+.aero__track {
+  position: relative;
+  height: 28px;
+  margin: 1.2rem 0 0.5rem;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--white) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 12%, transparent);
+}
+.aero__track-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--red), var(--gold), var(--green));
+  opacity: 0.5;
+  pointer-events: none;
+}
+.aero__handle {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  margin-top: -14px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 3px solid var(--bg-deep);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--gold) 60%, transparent);
+  cursor: grab;
+}
+.aero__handle:active { cursor: grabbing; }
+.aero__legend {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--head);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.g-gold { color: var(--gold); }
+
+/* ——— step 8: data pulses ——— */
+.tri-pulses {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+.tri-pulses.is-on { opacity: 1; }
+.tri-pulses svg { width: 130%; height: 130%; }
+
+/* ——— step 9: hidden-detail hotspots ——— */
+.tri-spots {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.tri-spots.is-on { opacity: 1; pointer-events: auto; }
+.tri-spot { position: absolute; transform: translate(-50%, -50%); }
+.tri-spot__dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--spot) 22%, var(--bg-deep));
+  border: 2px solid var(--spot);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--spot) 60%, transparent);
+  color: var(--white);
+  cursor: pointer;
+  animation: tri-spot-pulse 2s ease-out infinite;
+}
+.tri-spot__icon { font-size: 14px; line-height: 1; }
+@keyframes tri-spot-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--spot) 55%, transparent); }
+  70%  { box-shadow: 0 0 0 16px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.tri-spot__card {
+  position: absolute;
+  left: 50%; bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  width: 230px;
+  padding: 0.9rem 1rem;
+  text-align: left;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border: 1px solid var(--spot);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+}
+.tri-spot__nation { font-family: var(--head); font-size: 0.7rem; letter-spacing: 0.2em; color: var(--spot); }
+.tri-spot__card strong { display: block; font-family: var(--display); font-size: 1.15rem; margin: 0.1rem 0 0.3rem; }
+.tri-spot__card p { font-size: 0.86rem; line-height: 1.4; color: var(--muted); margin: 0; }
+
+/* ——— step 10: micro-texture swatch ——— */
+.tri-texture {
+  margin-top: 1.2rem;
+  margin-left: auto;
+  width: 160px; height: 160px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+  background:
+    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--white) 22%, transparent) 0 18%, transparent 22%),
+    radial-gradient(circle at 70% 60%, color-mix(in srgb, var(--white) 14%, transparent) 0 14%, transparent 18%),
+    repeating-radial-gradient(circle at 50% 50%, #16263b 0 6px, #1d3147 6px 12px);
+  background-size: 26px 26px, 32px 32px, 100% 100%;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+/* ——— step 11: Sialkot map ——— */
+.tri-map {
+  width: min(640px, 92vw);
+  margin-top: 1rem;
+  padding: 1.4rem;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(60% 60% at 50% 45%, color-mix(in srgb, var(--bg-deep) 86%, transparent), color-mix(in srgb, var(--bg-deep) 60%, transparent));
+  backdrop-filter: blur(4px);
+}
+.tri-map > svg { width: 100%; height: auto; display: block; } /* map only — not the pin icon */
+.tri-map__label {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  margin-top: 0.6rem; color: var(--gold);
+}
+.tri-map__label strong { display: block; font-family: var(--display); font-size: 1.15rem; color: var(--white); }
+.tri-map__label span { font-size: 0.84rem; color: var(--muted); }
+
+/* ——— step 12: then-vs-now timeline ——— */
+.tri-tl {
+  position: relative; width: min(760px, 94vw); height: 260px; margin-top: 1rem; overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(70% 70% at 50% 50%, color-mix(in srgb, var(--bg-deep) 82%, transparent), transparent);
+  backdrop-filter: blur(3px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.tri-tl__marker {
+  position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(var(--gold), transparent);
+  z-index: 2;
+}
+.tri-tl__rail { position: absolute; top: 50%; left: 50%; display: flex; align-items: center; }
+.tri-tl__line {
+  position: absolute; left: -2000px; right: -2000px; top: 50%; height: 2px;
+  background: color-mix(in srgb, var(--white) 18%, transparent);
+}
+.tri-tl__era {
+  position: relative;
+  width: 260px; flex: 0 0 260px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 0 1rem;
+  opacity: 0.35;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.tri-tl__era.is-active { opacity: 1; transform: scale(1.08); }
+.tri-tl__dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--era); margin-bottom: 0.9rem;
+  box-shadow: 0 0 16px var(--era);
+}
+.tri-tl__year { font-family: var(--display); font-size: 1.9rem; color: var(--era); line-height: 1; }
+.tri-tl__name { font-family: var(--head); letter-spacing: 0.1em; margin: 0.25rem 0; }
+.tri-tl__note { font-size: 0.8rem; color: var(--muted); }
+
+/* ——— step 13: finale ——— */
+.tri-finale .tri-caption__inner {
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border-radius: var(--radius-lg);
+  background: radial-gradient(closest-side, rgba(6, 10, 16, 0.78), rgba(6, 10, 16, 0.35) 70%, transparent);
+}
+.tri-finale .tri-stats {
+  display: flex; gap: clamp(1.5rem, 6vw, 4rem); justify-content: center; margin-bottom: 1.6rem;
+}
+.tri-stat { display: flex; flex-direction: column; }
+.tri-stat__n {
+  font-family: var(--display); font-weight: 700;
+  font-size: clamp(3rem, 9vw, 6rem); color: var(--gold); line-height: 1;
+  text-shadow: 0 0 40px color-mix(in srgb, var(--gold) 50%, transparent);
+}
+.tri-stat__l { font-family: var(--head); letter-spacing: 0.24em; font-size: 0.8rem; color: var(--muted); margin-top: 0.4rem; }
+
+.tri-fade-black {
+  position: absolute; inset: 0; z-index: 5;
+  background: #000; pointer-events: none;
+}
+
+/* ——— compact / mobile: ball stays ~centred behind, copy in a lower band ——— */
+.tri--compact .tri-caption {
+  align-items: flex-end;
+  justify-content: center;
+  text-align: center;
+  padding: clamp(1rem, 5vw, 2rem) 1.25rem clamp(5rem, 16vh, 8rem);
+}
+.tri--compact .tri-caption::before {
+  background: linear-gradient(0deg, rgba(7, 11, 18, 0.92) 0%, rgba(7, 11, 18, 0.6) 45%, transparent 80%);
+}
+.tri--compact .tri-top { align-items: flex-start; }
+.tri--compact .tri-caption__inner { max-width: 600px; }
+.tri--compact .tri-triangle { margin: 1.2rem auto 0; }
+.tri--compact .tri-stats { gap: 1.4rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tri-aurora, .tri-streams .stream, .tri-spot__dot { animation: none; }
+}

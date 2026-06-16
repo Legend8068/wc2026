@@ -15,6 +15,7 @@ import Groups from './components/Groups';
 import MusicPlayer from './components/MusicPlayer';
 import Statistics from './components/Statistics';
 import HostMap from './components/HostMap';
+import TriondaStory from './components/trionda/TriondaStory';
 
 const TICK_MS = 500;
 const MATCH_DURATION_MS = 3 * 3600000; // 3 hours (including potential extra time)
@@ -197,6 +198,7 @@ export default function App() {
       <Groups snapshot={snapshot} />
       <Statistics snapshot={snapshot} />
       <HostMap snapshot={snapshot} />
+      <TriondaStory />
       <MusicPlayer />
 
       <footer>
