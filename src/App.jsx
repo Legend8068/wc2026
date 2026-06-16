@@ -196,7 +196,7 @@ export default function App() {
       <Bracket snapshot={snapshot} />
       <Groups snapshot={snapshot} />
       <Statistics snapshot={snapshot} />
-      <HostMap />
+      <HostMap snapshot={snapshot} />
       <MusicPlayer />
 
       <footer>

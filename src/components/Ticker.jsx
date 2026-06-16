@@ -45,7 +45,7 @@ export default function Ticker({ snapshot }) {
     const flagB = D.flag(fx.b);
 
     if (st.status === 'live' || st.status === 'ht') {
-      const minText = st.status === 'ht' ? 'HT' : `${st.minute}′`;
+      const minText = st.status === 'ht' ? 'HT' : `${st.clockText || st.minute}′`;
       return (
         <span className="ticker-item" key={indexKey}>
           <span className="t-live">● {minText}</span>

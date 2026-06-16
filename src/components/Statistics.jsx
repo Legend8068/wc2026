@@ -312,13 +312,13 @@ function computeTournamentStats(snapshot) {
     initTeam(a);
     initTeam(b);
 
-    if (st.status === 'ft') {
+    if (st.status === 'ft' || st.status === 'live' || st.status === 'ht') {
       teamAgg[a].played++;
       teamAgg[b].played++;
-      teamAgg[a].goals += st.sa;
-      teamAgg[b].goals += st.sb;
-      teamAgg[a].conceded += st.sb;
-      teamAgg[b].conceded += st.sa;
+      teamAgg[a].goals += st.sa || 0;
+      teamAgg[b].goals += st.sb || 0;
+      teamAgg[a].conceded += st.sb || 0;
+      teamAgg[b].conceded += st.sa || 0;
 
       if (st.sa > st.sb) { teamAgg[a].wins++; teamAgg[b].losses++; }
       else if (st.sa < st.sb) { teamAgg[b].wins++; teamAgg[a].losses++; }
@@ -388,13 +388,13 @@ function computeTournamentStats(snapshot) {
     initTeam(fxA);
     initTeam(fxB);
 
-    if (st.status === 'ft') {
+    if (st.status === 'ft' || st.status === 'live' || st.status === 'ht') {
       teamAgg[fxA].played++;
       teamAgg[fxB].played++;
-      teamAgg[fxA].goals += st.sa;
-      teamAgg[fxB].goals += st.sb;
-      teamAgg[fxA].conceded += st.sb;
-      teamAgg[fxB].conceded += st.sa;
+      teamAgg[fxA].goals += st.sa || 0;
+      teamAgg[fxB].goals += st.sb || 0;
+      teamAgg[fxA].conceded += st.sb || 0;
+      teamAgg[fxB].conceded += st.sa || 0;
 
       const winner = st.winner;
       if (winner === fxA) { teamAgg[fxA].wins++; teamAgg[fxB].losses++; }
@@ -486,7 +486,7 @@ function computeTournamentStats(snapshot) {
     .map(t => ({ ...t }));
 
   const totalGoals = teamList.reduce((s, t) => s + t.goals, 0);
-  const totalMatches = [...Object.values(states)].filter(s => s && s.status === 'ft').length;
+  const totalMatches = [...Object.values(states)].filter(s => s && (s.status === 'ft' || s.status === 'live' || s.status === 'ht')).length;
 
   return {
     topScorers, penaltyKings, topCards, ownGoalsList,
@@ -665,7 +665,7 @@ function TeamRadialCard({ entry, statKey, max, color, label, sublabel }) {
   const displayVal = statKey === 'avgPossession' ? `${val}%` : val;
 
   return (
-    <div className="tr-card">
+    <div className="tr-card" style={{ '--tr-color': color }}>
       <RadialRing value={val} max={max} size={72} strokeWidth={6} color={color} label={displayVal} />
       <div className="tr-info">
         <div className="tr-who">

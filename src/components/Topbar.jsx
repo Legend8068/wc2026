@@ -26,10 +26,22 @@ export default function Topbar({ now, mode, feedOk, onToggleMode, demoPlaying, o
     badgeTitle = 'Live feed unavailable — simulating at the real clock. Click for demo mode.';
   }
 
+  const goHome = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
   return (
     <nav className="topbar">
       <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>WC<BrandText text="2026" className="topbar-brand" /> LIVE TRACKER</div>
+        <div
+          className="brand-home"
+          role="button"
+          tabIndex={0}
+          title="Back to top"
+          onClick={goHome}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goHome(); } }}
+          style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+        >
+          WC<BrandText text="2026" className="topbar-brand" /> LIVE TRACKER
+        </div>
         <small style={{ width: '100%' }}>USA · CANADA · MEXICO</small>
       </div>
       <div className="nav-links">

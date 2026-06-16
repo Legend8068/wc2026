@@ -1,7 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import D from '../data';
+import { lineups, applySimBadges } from '../engine';
+import { fetchLineup } from '../live';
 import RevealSection from './RevealSection';
 import BrandText from './BrandText';
+import VisualLineup from './VisualLineup';
+import LottieComp from 'lottie-react';
+import balancingFootball from '../assets/balancing-football.json';
+
+const Lottie = LottieComp.default || LottieComp;
 
 function ScoreDisplay({ value }) {
   const [pop, setPop] = useState(false);
@@ -53,9 +60,91 @@ function renderStatBar(name, valA, valB, suffix = '') {
   );
 }
 
+function LineupColumn({ side, teamName, flag, data }) {
+  return (
+    <div className={`mc-xi-col ${side}`}>
+      <div className="mc-form-head">
+        <img className="mc-form-flag" src={flag} alt="" />
+        <span className="mc-form-team">{teamName}</span>
+        <span className="mc-form-badge">{data.formation}</span>
+      </div>
+      <ul className="mc-xi">
+        {data.xi.map((p, i) => (
+          <li className="mc-player-row" key={i}>
+            <span className="mc-shirt">{p.num}</span>
+            <span className="mc-pname">{p.name}</span>
+            <span className={`mc-pos-tag pos-${p.pos}`}>{p.pos}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mc-subs-head">SUBSTITUTES</div>
+      <ul className="mc-subs">
+        {data.subs.map((p, i) => (
+          <li className="mc-sub-row" key={i}>
+            <span className="mc-shirt sub">{p.num}</span>
+            <span className="mc-pname">{p.name}</span>
+            <span className={`mc-pos-tag pos-${p.pos}`}>{p.pos}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Resolve a fixture id back to its { id, a, b } (group fixture, or a knockout
+// match whose slots have been filled in the current snapshot).
+function findFixture(snapshot, id) {
+  const g = D.GROUP_FIXTURES.find(f => f.id === id);
+  if (g) return g;
+  const m = D.KO.find(k => k.id === id);
+  if (m) {
+    const t = snapshot?.teams?.[id];
+    if (t && t[0] && t[1]) return { id, a: t[0], b: t[1] };
+  }
+  return null;
+}
+
 export default function MatchCentre({ snapshot }) {
-  const [tab, setTab] = useState('active'); // 'active' (Live / Recent) or 'upcoming'
+  // null until the user picks; falls back to the first non-empty tab below.
+  const [tab, setTab] = useState(null);
   const [expandedMatchId, setExpandedMatchId] = useState(null);
+  // Real ESPN line-ups, lazily fetched when a card is expanded: fxId -> { eid, status, lu }
+  const [lineupCache, setLineupCache] = useState({});
+
+  // Preserve the horizontal scroll position of the strip across expand/collapse:
+  // expanding filters the strip down to one card (scroll resets), so we remember
+  // where the user was and restore it when they hide the stats again.
+  const stripRef = useRef(null);
+  const savedScrollRef = useRef(0);
+  const restorePendingRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!expandedMatchId && restorePendingRef.current && stripRef.current) {
+      stripRef.current.scrollLeft = savedScrollRef.current;
+      restorePendingRef.current = false;
+    }
+  }, [expandedMatchId]);
+
+  // Deps kept primitive so this only re-runs when the open match (or its
+  // status) changes — not on every 500 ms render tick.
+  const expSt = snapshot?.states?.[expandedMatchId];
+  const expEid = expSt?.eid;
+  const expStatus = expSt?.status;
+  useEffect(() => {
+    if (!expandedMatchId || !expEid) return;          // sim-only / unmapped → keep sim line-up
+    const fx = findFixture(snapshot, expandedMatchId);
+    if (!fx) return;
+    let cancelled = false;
+    fetchLineup(expEid, fx.a, fx.b, expSt.isoDate, expSt)
+      .then(lu => {
+        if (!cancelled && lu) {
+          setLineupCache(prev => ({ ...prev, [expandedMatchId]: { eid: expEid, status: expStatus, lu } }));
+        }
+      })
+      .catch(err => console.warn('lineup fetch failed', err));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandedMatchId, expEid, expStatus]);
 
   if (!snapshot) return null;
 
@@ -96,32 +185,40 @@ export default function MatchCentre({ snapshot }) {
     })
     .sort((a, b) => a.fx.ts - b.fx.ts); // soonest upcoming matches first
 
-  // Determine which matches to show based on selected tab
-  let cards = [];
-  let isUpcomingMode = false;
-  let isTournamentComplete = false;
+  // Three independent tabs. Default to the first one that actually has matches
+  // (live → recent → upcoming) until the user explicitly picks one.
+  const defaultTab = activeMatches.length ? 'live' : recentMatches.length ? 'recent' : 'upcoming';
+  const effTab = tab || defaultTab;
 
-  if (tab === 'active') {
-    if (activeMatches.length > 0) {
-      cards = activeMatches;
-    } else if (recentMatches.length > 0) {
-      cards = recentMatches;
-    } else {
-      // Fallback if no active or completed matches exist yet
-      cards = upcomingMatches;
-      isUpcomingMode = true;
-    }
-  } else {
-    if (upcomingMatches.length > 0) {
-      cards = upcomingMatches;
-      isUpcomingMode = true;
-    } else {
-      isTournamentComplete = true;
-    }
-  }
+  const byTab = { live: activeMatches, recent: recentMatches, upcoming: upcomingMatches };
+  const cards = byTab[effTab] || [];
+  const cardsToRender = expandedMatchId 
+    ? cards.filter(c => c.fx.id === expandedMatchId)
+    : cards;
+
+  const TABS = [
+    { id: 'live', label: activeMatches.length ? `LIVE (${activeMatches.length})` : 'LIVE' },
+    { id: 'recent', label: 'RECENT' },
+    { id: 'upcoming', label: 'UPCOMING' },
+  ];
+
+  const emptyMsg = {
+    live: 'NO LIVE MATCHES AT THE MOMENT',
+    recent: 'NO COMPLETED MATCHES YET',
+    upcoming: 'NO UPCOMING MATCHES — TOURNAMENT COMPLETE',
+  };
 
   const toggleExpand = (matchId) => {
-    setExpandedMatchId(prev => (prev === matchId ? null : matchId));
+    setExpandedMatchId(prev => {
+      if (prev === matchId) {
+        // Collapsing — restore the saved scroll once the full list re-renders.
+        restorePendingRef.current = true;
+        return null;
+      }
+      // Expanding — remember where the user was in the horizontal list.
+      if (stripRef.current) savedScrollRef.current = stripRef.current.scrollLeft;
+      return matchId;
+    });
   };
 
   const renderCard = ({ fx, label }) => {
@@ -134,7 +231,7 @@ export default function MatchCentre({ snapshot }) {
     const isExpanded = expandedMatchId === fx.id;
 
     const minTxt = isLive
-      ? (st.status === 'ht' ? 'HT' : `${st.minute}′ LIVE`)
+      ? (st.status === 'ht' ? 'HT' : `${st.clockText || st.minute}′ LIVE`)
       : isFt ? 'FULL TIME' : `${fx.d} · ${fx.t} SGT`;
 
     const minCls = isLive ? '' : isFt ? ' ft' : ' pre';
@@ -143,9 +240,22 @@ export default function MatchCentre({ snapshot }) {
     const teamB = D.TEAMS[fx.b];
     if (!teamA || !teamB) return null;
 
+    // Prefer the real ESPN line-up (lazily fetched on expand, already badged);
+    // until it arrives — or for sim/unmapped matches — show the deterministic
+    // simulated line-up so there's always something to render.
+    const cached = lineupCache[fx.id];
+    const espnLu = cached && cached.eid === st.eid ? cached.lu : null;
+    const lu = (canExpand && isExpanded)
+      ? (espnLu || applySimBadges(lineups(fx.id, fx.a, fx.b), fx, st))
+      : null;
+
+    // Which XI to show: the second-half line-up once the second half is under
+    // way (and at full time); the first-half XI before then and during the break.
+    const half = (st.status === 'ft' || (st.status === 'live' && st.minute > 45)) ? 2 : 1;
+
     return (
-      <div 
-        className={`live-card ${isLive ? 'is-live' : ''} ${canExpand ? 'clickable' : ''} ${isExpanded ? 'is-expanded' : ''}`} 
+      <div
+        className={`live-card ${isLive ? 'is-live' : ''} ${canExpand ? 'clickable' : ''} ${isExpanded ? 'is-expanded' : ''}`}
         key={fx.id}
         onClick={canExpand ? () => toggleExpand(fx.id) : undefined}
       >
@@ -171,7 +281,10 @@ export default function MatchCentre({ snapshot }) {
             </div>
             <div className="lcv-info-box">
               <div className="lcv-label">{label}</div>
-              <div className={`lcv-time${minCls}`}>{minTxt}</div>
+              <div className={`lcv-time${minCls}`}>
+                {isLive && <span className="lcv-live-dot" />}
+                {minTxt}
+              </div>
             </div>
           </div>
 
@@ -191,43 +304,58 @@ export default function MatchCentre({ snapshot }) {
 
         {canExpand && isExpanded && (
           <div className="lc-details-drawer" onClick={(e) => e.stopPropagation()}>
-            {/* Timeline Section */}
-            <div className="mc-timeline-section">
-              <div className="mc-details-header">MATCH EVENTS</div>
-              {!st.details || st.details.length === 0 ? (
-                <div className="mc-no-events">No match events reported yet.</div>
-              ) : (
-                <div className="mc-timeline">
-                  {st.details.map((ev, idx) => {
-                    const isHome = ev.isHome;
-                    return (
-                      <div className={`mc-timeline-row ${isHome ? 'home-event' : 'away-event'}`} key={idx}>
-                        <div className="mc-timeline-left">
-                          {isHome && (
-                            <div className="mc-event-content">
-                              <span className="mc-player-name">{ev.player}</span>
-                              <span className="mc-event-icon" title={ev.typeText}>{getEventIcon(ev)}</span>
-                            </div>
-                          )}
+            <div className="lc-drawer-left">
+              {/* Timeline Section */}
+              <div className="mc-timeline-section">
+                <div className="mc-details-header">MATCH EVENTS</div>
+                {!st.details || st.details.length === 0 ? (
+                  <div className="mc-no-events">No match events reported yet.</div>
+                ) : (
+                  <div className="mc-timeline">
+                    {st.details.map((ev, idx) => {
+                      const isHome = ev.isHome;
+                      return (
+                        <div className={`mc-timeline-row ${isHome ? 'home-event' : 'away-event'}`} key={idx}>
+                          <div className="mc-timeline-left">
+                            {isHome && (
+                              <div className="mc-event-wrapper">
+                                <div className="mc-event-content">
+                                  <span className="mc-player-name">{ev.player}</span>
+                                  <span className="mc-event-icon" title={ev.typeText}>{getEventIcon(ev)}</span>
+                                </div>
+                                {ev.assist && (
+                                  <div className="mc-event-assist">
+                                    👟 {ev.assist}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="mc-timeline-middle">{ev.clock}</div>
+                          <div className="mc-timeline-right">
+                            {!isHome && (
+                              <div className="mc-event-wrapper">
+                                <div className="mc-event-content">
+                                  <span className="mc-event-icon" title={ev.typeText}>{getEventIcon(ev)}</span>
+                                  <span className="mc-player-name">{ev.player}</span>
+                                </div>
+                                {ev.assist && (
+                                  <div className="mc-event-assist">
+                                    👟 {ev.assist}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div className="mc-timeline-middle">{ev.clock}</div>
-                        <div className="mc-timeline-right">
-                          {!isHome && (
-                            <div className="mc-event-content">
-                              <span className="mc-event-icon" title={ev.typeText}>{getEventIcon(ev)}</span>
-                              <span className="mc-player-name">{ev.player}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-            {/* Statistics Section */}
-            <div className="mc-stats-section">
+              {/* Statistics Section */}
+              <div className="mc-stats-section">
               <div className="mc-details-header">STATISTICS</div>
               <div className="mc-stats-list">
                 {renderStatBar("Possession", st.statsHome?.possessionPct, st.statsAway?.possessionPct, "%")}
@@ -236,7 +364,25 @@ export default function MatchCentre({ snapshot }) {
                 {renderStatBar("Fouls Committed", st.statsHome?.foulsCommitted, st.statsAway?.foulsCommitted)}
                 {renderStatBar("Won Corners", st.statsHome?.wonCorners, st.statsAway?.wonCorners)}
               </div>
+              </div>
             </div>
+            {/* End of lc-drawer-left */}
+
+            {/* Line-ups Section */}
+            {lu && (
+              <div className="lc-drawer-right mc-lineups-section">
+                <div className="mc-details-header">LINE-UPS</div>
+                <VisualLineup
+                  home={lu.home}
+                  away={lu.away}
+                  teamA={teamA}
+                  teamB={teamB}
+                  flagA={D.flag(fx.a)}
+                  flagB={D.flag(fx.b)}
+                  half={half}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -252,32 +398,31 @@ export default function MatchCentre({ snapshot }) {
       </div>
 
       <div className="mc-tabs">
-        <button 
-          className={`mc-tab-btn ${tab === 'active' ? 'active' : ''}`} 
-          onClick={() => { setTab('active'); setExpandedMatchId(null); }}
-        >
-          {activeMatches.length > 0 ? `LIVE (${activeMatches.length})` : 'LIVE & RECENT'}
-        </button>
-        <button 
-          className={`mc-tab-btn ${tab === 'upcoming' ? 'active' : ''}`} 
-          onClick={() => { setTab('upcoming'); setExpandedMatchId(null); }}
-        >
-          UPCOMING
-        </button>
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            className={`mc-tab-btn ${effTab === t.id ? 'active' : ''} ${t.id === 'live' && activeMatches.length ? 'is-live-tab' : ''}`}
+            onClick={() => { setTab(t.id); setExpandedMatchId(null); }}
+          >
+            {t.id === 'live' && activeMatches.length > 0 && <span className="mc-tab-dot" />}
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {tab === 'active' && activeMatches.length === 0 && recentMatches.length === 0 && (
-        <div className="live-empty">NO LIVE MATCHES AT THE MOMENT · SHOWING UPCOMING</div>
-      )}
-      {isUpcomingMode && tab === 'upcoming' && (
-        <div className="live-empty">NO MATCH IN PLAY — <b>UP NEXT</b></div>
-      )}
-      {isTournamentComplete && (
-        <div className="live-empty">TOURNAMENT COMPLETE — <b>SEE THE BRACKET FOR THE CHAMPION</b></div>
+      {cards.length === 0 && (
+        <div className="live-empty">
+          <div className="live-empty-text">{emptyMsg[effTab]}</div>
+          {effTab === 'live' && (
+            <div className="live-empty-anim">
+              <Lottie animationData={balancingFootball} loop autoplay style={{ width: 180, height: 180 }} />
+            </div>
+          )}
+        </div>
       )}
 
-      <div className="live-strip" id="live-strip">
-        {cards.map(renderCard)}
+      <div className={`live-strip ${effTab === 'live' ? 'is-live-strip' : ''}`} id="live-strip" ref={stripRef}>
+        {cardsToRender.map(renderCard)}
       </div>
     </RevealSection>
   );

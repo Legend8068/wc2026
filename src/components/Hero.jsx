@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import BrandText from './BrandText';
 import InteractiveBall from './InteractiveBall';
 import MapIcon from './MapIcon';
@@ -11,33 +11,52 @@ function scrollToVenues() {
 
 function InteractiveHeroMap() {
   const mapRef = useRef(null);
+  const boundsRef = useRef(null);
+  const rafRef = useRef(null);
+
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, []);
   
-  const handleMouseMove = (e) => {
+  const handlePointerEnter = () => {
     if (!mapRef.current) return;
-    const { left, top, width, height } = mapRef.current.getBoundingClientRect();
+    boundsRef.current = mapRef.current.getBoundingClientRect();
+  };
+
+  const handlePointerMove = (e) => {
+    if (!mapRef.current) return;
+    if (!boundsRef.current) boundsRef.current = mapRef.current.getBoundingClientRect();
+
+    const { left, top, width, height } = boundsRef.current;
     const x = (e.clientX - left) / width;
     const y = (e.clientY - top) / height;
-    
     const rotateX = (0.5 - y) * 30;
     const rotateY = (x - 0.5) * 30;
-    
-    mapRef.current.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
-    mapRef.current.style.filter = `drop-shadow(${rotateY * -0.5}px ${rotateX * 0.5 + 10}px 24px rgba(51, 102, 255, 0.4))`;
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      if (!mapRef.current) return;
+      mapRef.current.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
+    });
   };
   
-  const handleMouseLeave = () => {
+  const handlePointerLeave = () => {
+    boundsRef.current = null;
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     if (!mapRef.current) return;
     mapRef.current.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
-    mapRef.current.style.filter = '';
   };
 
   return (
     <div 
       ref={mapRef}
       className="hero-map-wrapper"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ transition: 'transform 0.1s ease-out, filter 0.1s ease-out', display: 'flex', justifyContent: 'center', width: '100%', marginTop: '40px' }}
+      onPointerEnter={handlePointerEnter}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
     >
       <MapIcon
         className="hero-map"
@@ -53,61 +72,72 @@ function InteractiveHeroMap() {
   );
 }
 
-function StatNumber({ value, isDate }) {
+function StatNumber({ value, isDate, animate }) {
   const [count, setCount] = useState(isDate ? value : 0);
-  const elementRef = useRef(null);
   const hasAnimated = useRef(false);
 
   useEffect(() => {
     if (isDate) return;
+    if (!animate || hasAnimated.current) return;
+    hasAnimated.current = true;
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const target = parseInt(value, 10);
     if (reduced || isNaN(target)) {
-      setCount(value);
-      return;
+      const raf = requestAnimationFrame(() => setCount(value));
+      return () => cancelAnimationFrame(raf);
     }
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true;
-          observer.unobserve(entry.target);
+    const start = performance.now();
+    const duration = 1400;
+    let raf = 0;
 
-          const start = performance.now();
-          const duration = 1400;
-
-          const step = (now) => {
-            const progress = Math.min(1, (now - start) / duration);
-            // cubic ease out: 1 - (1 - p)^3
-            const currentVal = Math.round(target * (1 - Math.pow(1 - progress, 3)));
-            setCount(currentVal);
-            if (progress < 1) {
-              requestAnimationFrame(step);
-            }
-          };
-          requestAnimationFrame(step);
-        }
-      });
-    }, { threshold: 0.2 });
-
-    if (elementRef.current) {
-      observer.observe(elementRef.current);
-    }
+    const step = (now) => {
+      const progress = Math.min(1, (now - start) / duration);
+      // cubic ease out: 1 - (1 - p)^3
+      const currentVal = Math.round(target * (1 - Math.pow(1 - progress, 3)));
+      setCount(currentVal);
+      if (progress < 1) {
+        raf = requestAnimationFrame(step);
+      }
+    };
+    raf = requestAnimationFrame(step);
 
     return () => {
-      observer.disconnect();
+      if (raf) cancelAnimationFrame(raf);
     };
-  }, [value, isDate]);
+  }, [value, isDate, animate]);
 
   if (isDate) {
     return <div className="stat-num small">{value}</div>;
   }
 
-  return <div ref={elementRef} className="stat-num">{count}</div>;
+  return <div className="stat-num">{count}</div>;
 }
 
 export default function Hero() {
+  const statsLabelRef = useRef(null);
+  const [statsRevealed, setStatsRevealed] = useState(false);
+
+  useEffect(() => {
+    if (statsRevealed) return;
+
+    let raf = 0;
+    const revealWhenReady = () => {
+      if (document.querySelector('.loading-screen')) {
+        raf = requestAnimationFrame(revealWhenReady);
+        return;
+      }
+      setStatsRevealed(true);
+    };
+
+    revealWhenReady();
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [statsRevealed]);
+
   return (
     <header className="hero">
       <div className="hero-title">
@@ -120,18 +150,18 @@ export default function Hero() {
       <InteractiveBall />
 
       <div className="hero-stats">
-        <div className="hero-stats-label">THE TOURNAMENT AT A GLANCE</div>
+        <div ref={statsLabelRef} className="hero-stats-label">THE TOURNAMENT AT A GLANCE</div>
         <div className="stats-grid">
           <div className="stat">
-            <StatNumber value={48} />
+            <StatNumber value={48} animate={statsRevealed} />
             <div className="stat-label">NATIONS</div>
           </div>
           <div className="stat">
-            <StatNumber value={104} />
+            <StatNumber value={104} animate={statsRevealed} />
             <div className="stat-label">MATCHES</div>
           </div>
           <div className="stat">
-            <StatNumber value={16} />
+            <StatNumber value={16} animate={statsRevealed} />
             <div className="stat-label">HOST CITIES</div>
           </div>
           <div className="stat">

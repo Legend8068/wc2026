@@ -40,14 +40,14 @@ const VENUES = [
 
 const TOTAL_MATCHES = VENUES.reduce((s, v) => s + v.matches, 0);
 
-function Marker({ v, active, onEnter, onLeave }) {
+function Marker({ v, active, isLive, onEnter, onLeave }) {
   // Flip the info card to the opposite side near the map edges so it stays on-screen.
   const vSide = v.top < 24 ? 'below' : 'above';
   const hSide = v.left > 78 ? 'left' : v.left < 22 ? 'right' : 'center';
 
   return (
     <div
-      className={`hm-marker hm-${v.cc} ${active ? 'is-active' : ''}`}
+      className={`hm-marker hm-${v.cc} ${active ? 'is-active' : ''} ${isLive ? 'is-live' : ''}`}
       style={{ left: `${v.left}%`, top: `${v.top}%` }}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
@@ -65,7 +65,8 @@ function Marker({ v, active, onEnter, onLeave }) {
       </button>
 
       <div className={`hm-card hm-card--${vSide} hm-card--${hSide}`} role="tooltip">
-        {v.note && <span className="hm-note">{v.note}</span>}
+        {isLive && <span className="hm-live-tag">LIVE</span>}
+        {v.note && !isLive && <span className="hm-note">{v.note}</span>}
         <span className="hm-stadium">{v.stadium}</span>
         <span className="hm-city">{v.city}</span>
         <span className="hm-meta">
@@ -79,7 +80,7 @@ function Marker({ v, active, onEnter, onLeave }) {
   );
 }
 
-export default function HostMap() {
+export default function HostMap({ snapshot }) {
   const [active, setActive] = useState(null);
   const [hoverCC, setHoverCC] = useState(null);
   const enter = useCallback((id) => () => setActive(id), []);
@@ -121,15 +122,31 @@ export default function HostMap() {
         </div>
 
         <div className="hm-markers">
-          {VENUES.map((v) => (
-            <Marker
-              key={v.id}
-              v={v}
-              active={active === v.id}
-              onEnter={enter(v.id)}
-              onLeave={leave}
-            />
-          ))}
+          {VENUES.map((v) => {
+            let isLive = false;
+            if (snapshot && snapshot.states) {
+              const vName = v.stadium.toLowerCase();
+              const cName = v.city.toLowerCase();
+              Object.values(snapshot.states).forEach(st => {
+                if ((st.status === 'live' || st.status === 'ht') && st.venue) {
+                  const lv = st.venue.toLowerCase().trim();
+                  if (lv.length > 2 && (lv.includes(vName) || lv.includes(cName) || vName.includes(lv) || cName.includes(lv))) {
+                    isLive = true;
+                  }
+                }
+              });
+            }
+            return (
+              <Marker
+                key={v.id}
+                v={v}
+                active={active === v.id}
+                isLive={isLive}
+                onEnter={enter(v.id)}
+                onLeave={leave}
+              />
+            );
+          })}
         </div>
       </div>
 

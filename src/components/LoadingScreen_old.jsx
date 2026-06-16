@@ -27,9 +27,7 @@ const G_LIGHT = '#2c4a36';
 const G_DARK = '#213a2c';
 
 /* Stage timeline (ms offsets) — eased & overlapped for smoothness. */
-// goal forms at 2050 and finishes morphing ~2850; the ball is held until 3150 so
-// it only strikes once the net has fully settled.
-const T = { stripes: 0, marks: 1000, goal: 2050, shoot: 3150, whip: 4150, settle: 4900, out: 6000, end: 6900 };
+const T = { stripes: 0, marks: 1000, goal: 2050, shoot: 2950, whip: 3330, settle: 3800, out: 4900, end: 5800 };
 
 function LoadingScreen({ onDone }) {
   const overlay = useRef(null);
@@ -42,42 +40,15 @@ function LoadingScreen({ onDone }) {
   const finished = useRef(false);
 
   useLayoutEffect(() => {
-    // Retry across a few frames: on a cold reload the hero may not be laid out
-    // on the first paint. Keep looking for a few frames so we always align to it
-    // (and never silently fall back to the centred lockup because of a 1-frame race).
-    let raf, tries = 0;
-    const findHero = () => {
-      const ht = document.querySelector('.hero .hero-title');
-      if (ht) { const r = ht.getBoundingClientRect(); setPos({ left: r.left, top: r.top }); return; }
-      if (tries++ < 30) { raf = requestAnimationFrame(findHero); return; }
-      setPos({ left: null, top: null }); // genuine fallback after ~0.5s
-    };
-    findHero();
-    return () => cancelAnimationFrame(raf);
+    const ht = document.querySelector('.hero .hero-title');
+    setPos(ht ? (() => { const r = ht.getBoundingClientRect(); return { left: r.left, top: r.top }; })() : { left: null, top: null });
   }, []);
 
   useLayoutEffect(() => {
     if (!pos) return;
-    // The animation needs the loader's own "2026" lockup measured. Those chars
-    // can take a frame or two to lay out (fonts/layout); retry until they have
-    // real dimensions so the full animation plays EVERY time — only fall back to
-    // the static lockup if they never appear within ~0.6s.
-    let raf, tries = 0;
-    const measure = () => {
-      const year = title.current?.querySelector('.hero-brand-year');
-      const chars = year?.querySelectorAll('.brand-char');
-      const ready = chars && chars.length >= 2 && chars[1].getBoundingClientRect().height > 4;
-      if (!ready) {
-        if (tries++ < 40) { raf = requestAnimationFrame(measure); return; }
-        setGeo({ ok: false });
-        return;
-      }
-      computeGeo(chars);
-    };
-    measure();
-    return () => cancelAnimationFrame(raf);
-
-    function computeGeo(chars) {
+    const year = title.current?.querySelector('.hero-brand-year');
+    const chars = year?.querySelectorAll('.brand-char');
+    if (!chars || chars.length < 2) { setGeo({ ok: false }); return; }
     const zr = chars[1].getBoundingClientRect(); // "2026"[1] === "0"
     const d = zr.height * 1.04;
     const cx = zr.left + zr.width / 2;
@@ -94,8 +65,14 @@ function LoadingScreen({ onDone }) {
     // inside the green. Markings reference the pitch centre (pcy); the goal and
     // ball still resolve to the "0" (cy).
     const pcy = vh / 2;
-    const W = vw, H = vh;
-    const L = 0, R = vw, Tp = 0, B = vh;
+    const RATIO = 1.85;
+    let W = vw, H = vh;
+    if (vw / vh > RATIO) {
+      H = vw / RATIO;
+    } else {
+      W = vh * RATIO;
+    }
+    const L = scx - W / 2, R = scx + W / 2, Tp = pcy - H / 2, B = pcy + H / 2;
 
     // ---- GOAL (front-on net) centred on the screen but WIDE enough to contain
     // the ball's landing "0" (cx, cy); vertically centred on cy so the ball
@@ -112,10 +89,7 @@ function LoadingScreen({ onDone }) {
     const lerp = (a, b, t) => a + (b - a) * t;
 
     const floor_0 = `M ${L} ${B} L ${L} ${Tp} L ${R} ${Tp} L ${R} ${B} Z`;
-    // Full-screen dark interior so the goal's depth fill bleeds to every edge —
-    // no off-colour border band around the formed goal. The gold frame stays
-    // inset by gm and simply floats over this fill.
-    const floor_1 = `M ${L} ${B} L ${L} ${Tp} L ${R} ${Tp} L ${R} ${B} Z`;
+    const floor_1 = `M ${fL} ${fB} L ${fL} ${fT} L ${fR} ${fT} L ${fR} ${fB} Z`;
     const frame_0 = `M ${L} ${B} L ${L} ${Tp} L ${R} ${Tp} L ${R} ${B}`;
     const frame_1 = `M ${fL} ${fB} L ${fL} ${fT} L ${fR} ${fT} L ${fR} ${fB}`; // crossbar + posts + goal line
     const backFrame = `M ${bbL} ${bbY} L ${bbR} ${bbY}`;  // back-bottom bar
@@ -141,93 +115,39 @@ function LoadingScreen({ onDone }) {
       stripeRects.push({ d0, d1, fill });
     }
 
-    // ROOF net ribs: crossbar (top-front bar) → back-bottom bar.
-    // d1 is a quadratic with a midpoint control (visually straight) so it shares
-    // the same path structure as d0 and the punched variant d1p, letting Framer
-    // morph between them smoothly. d1p bows the rib toward the ball's impact —
-    // its two endpoints are IDENTICAL to d1, so the rope stays tied to its bars
-    // while only the middle ripples (a localised pocket, not a rigid shift).
-    const vSpread = W * 0.17;
+    // ROOF net ribs: crossbar (top-front bar) → back-bottom bar
     const verts = Array.from({ length: NS - 1 }, (_, i) => {
       const f = (i + 1) / NS;
       const x0 = L + f * W;
       const d0 = `M ${x0} ${Tp} Q ${x0} ${pcy} ${x0} ${B}`;
       const tx = lerp(fL, fR, f), bx = lerp(bbL, bbR, f);
-      const mx = (tx + bx) / 2, my = (fT + bbY) / 2;
-      const d1 = `M ${tx} ${fT} Q ${mx} ${my} ${bx} ${bbY}`;
-      const infl = Math.exp(-Math.pow((tx - cx) / vSpread, 2));
-      // Whiplash outwards: shift in X away from cx, shift in Y away from cy
-      const px = mx - (cx - mx) * 0.3 * infl;
-      const py = my + (my - cy) * 0.45 * infl;
-      const d1p = `M ${tx} ${fT} Q ${px} ${py} ${bx} ${bbY}`;
-      const wd = Math.min(0.18, Math.abs(tx - cx) / W * 0.4);   // ripple spreads out from centre
-      return { d0, d1, d1p, wd };
+      const ctrlY = fT + (bbY - fT) * 0.25;
+      const d1 = `M ${bx} ${bbY} Q ${bx} ${ctrlY} ${tx} ${fT}`;
+      return { d0, d1 };
     });
 
     // ROOF rings: horizontal rows crossing the ribs at increasing depth
     const NH = 11;
-    const hSpread = H * 0.14;
     const horizs = Array.from({ length: NH - 1 }, (_, i) => {
       const t = (i + 1) / NH;
-      const y0 = B - t * H;
+      const y0 = Tp + t * H; 
       const d0 = `M ${L} ${y0} Q ${scx} ${y0} ${R} ${y0}`;
-      const ry = lerp(fT, bbY, t), lx = lerp(fL, bbL, t), rx = lerp(fR, bbR, t);
-      const mx = (lx + rx) / 2;
-      const d1 = `M ${lx} ${ry} Q ${mx} ${ry} ${rx} ${ry}`;
-      const infl = Math.exp(-Math.pow((ry - cy) / hSpread, 2));
-      // Whiplash outwards: shift in X away from cx, shift in Y away from cy
-      const px = mx - (cx - mx) * 0.25 * infl;
-      const py = ry + (ry - cy) * 0.45 * infl;
-      const d1p = `M ${lx} ${ry} Q ${px} ${py} ${rx} ${ry}`;
-      const wd = Math.min(0.18, Math.abs(ry - cy) / H * 0.4);
-      return { d0, d1, d1p, wd };
+      const ctrlY = fT + (bbY - fT) * 0.25;
+      const u = t; 
+      const ry = (1 - u) * (1 - u) * bbY + 2 * (1 - u) * u * ctrlY + u * u * fT;
+      const lx = (1 - u) * (1 - u) * bbL + 2 * (1 - u) * u * bbL + u * u * fL;
+      const rx_val = (1 - u) * (1 - u) * bbR + 2 * (1 - u) * u * bbR + u * u * fR;
+      const sag = 15 * Math.sin(u * Math.PI);
+      const d1 = `M ${lx} ${ry} Q ${scx} ${ry + sag} ${rx_val} ${ry}`;
+      return { d0, d1 };
     });
 
-    // SIDE nets: strands fanning from each front post back to the back-bottom corner.
-    // We make them quadratic Beziers that can whip outwards on impact.
+    // SIDE nets: strands fanning from each front post back to the back-bottom corner
     const SN = 6;
-    const sideNets = [];
-    const sideVSpread = H * 0.2;
-
-    // Left side net
-    const leftHInfl = Math.exp(-Math.pow((bbL - cx) / (W * 0.15), 2));
-    for (let i = 0; i < SN; i++) {
-      const py = lerp(fT, fB, (i + 1) / (SN + 1));
-      const mx = (fL + bbL) / 2;
-      const my = (py + bbY) / 2;
-      const d1 = `M ${fL} ${py} Q ${mx} ${my} ${bbL} ${bbY}`;
-      const d0 = d1;
-      
-      const vInfl = Math.exp(-Math.pow((my - cy) / sideVSpread, 2));
-      const infl = leftHInfl * vInfl;
-      // Whiplash outwards: shift in X away from cx, shift in Y away from cy
-      const px = mx - (cx - mx) * 0.3 * infl;
-      const py_whip = my + (my - cy) * 0.45 * infl;
-      const d1p = `M ${fL} ${py} Q ${px} ${py_whip} ${bbL} ${bbY}`;
-      const wd = Math.min(0.18, Math.abs(mx - cx) / W * 0.4);
-      
-      sideNets.push({ d0, d1, d1p, wd });
-    }
-
-    // Right side net
-    const rightHInfl = Math.exp(-Math.pow((bbR - cx) / (W * 0.15), 2));
-    for (let i = 0; i < SN; i++) {
-      const py = lerp(fT, fB, (i + 1) / (SN + 1));
-      const mx = (fR + bbR) / 2;
-      const my = (py + bbY) / 2;
-      const d1 = `M ${fR} ${py} Q ${mx} ${my} ${bbR} ${bbY}`;
-      const d0 = d1;
-      
-      const vInfl = Math.exp(-Math.pow((my - cy) / sideVSpread, 2));
-      const infl = rightHInfl * vInfl;
-      // Whiplash outwards: shift in X away from cx, shift in Y away from cy
-      const px = mx - (cx - mx) * 0.3 * infl;
-      const py_whip = my + (my - cy) * 0.45 * infl;
-      const d1p = `M ${fR} ${py} Q ${px} ${py_whip} ${bbR} ${bbY}`;
-      const wd = Math.min(0.18, Math.abs(mx - cx) / W * 0.4);
-      
-      sideNets.push({ d0, d1, d1p, wd });
-    }
+    const sideNets = [
+      ...Array.from({ length: SN }, (_, i) => { const py = lerp(fT, fB, (i + 1) / (SN + 1)); return `M ${fL} ${py} L ${bbL} ${bbY}`; }),
+      ...Array.from({ length: SN }, (_, i) => { const py = lerp(fT, fB, (i + 1) / (SN + 1)); return `M ${fR} ${py} L ${bbR} ${bbY}`; }),
+    ];
 
     // Tie markings strictly to W and H so they never float detached
     const penD = W * 0.16, penW = H * 0.6, gbD = W * 0.058, gbW = H * 0.27;
@@ -237,7 +157,6 @@ function LoadingScreen({ onDone }) {
 
     setGeo({
       ok: true, vw, vh, cx, cy, d, scx, L, R, Tp, B, W, H,
-      fL, fR, fT, fB, shootFromX: d * 1.15,
       floor_0, floor_1, frame_0, frame_1, stripeRects, verts, horizs,
       backFrame, connectors, sideNets,
       ccR, cc: { x: scx, y: pcy },
@@ -250,7 +169,6 @@ function LoadingScreen({ onDone }) {
       rightArc: `M ${R - penD} ${pcy - hA} A ${rA} ${rA} 0 0 0 ${R - penD} ${pcy + hA}`,
       belowOffset: (vh - cy) + d * 2.5,
     });
-    }
   }, [pos]);
 
   useEffect(() => {
@@ -312,34 +230,31 @@ function LoadingScreen({ onDone }) {
   const frameThin = geo ? Math.max(1.6, geo.d * 0.04) : 2;
   const frameThick = geo ? Math.max(3, geo.d * 0.12) : 4;
 
-  // On 'whip' each rope snaps to its punched shape (d1p) and springs back —
-  // a damped pocket that ripples outward (wd stagger). Endpoints are unchanged,
-  // so the net never leaves its bars; the clip is a second safety net.
-  const vertLine = (d0, d1, d1p, wd, delay, key) => (
+  const vertLine = (d0, d1, delay, key) => (
     <motion.path key={key} fill="none" stroke={NET} strokeWidth={netW} strokeLinecap="round" strokeLinejoin="round"
       initial={{ d: d0, opacity: 0, pathLength: 0 }}
-      animate={{ d: stage === 'whip' ? [d1, d1p, d1] : inGoal ? d1 : d0, opacity: vertsOn ? 1 : 0, pathLength: vertsOn ? 1 : 0 }}
-      transition={{ d: stage === 'whip' ? { duration: 0.5, delay: wd, ease: [0.22, 1, 0.36, 1], times: [0, 0.4, 1] } : { duration: 0.8, ease: 'easeInOut' }, opacity: { duration: 0.3, delay }, pathLength: { duration: 0.7, delay, ease: 'easeInOut' } }} />
+      animate={{ d: inGoal ? d1 : d0, opacity: vertsOn ? 1 : 0, pathLength: vertsOn ? 1 : 0 }}
+      transition={{ d: { duration: 0.8, ease: 'easeInOut' }, opacity: { duration: 0.3, delay }, pathLength: { duration: 0.7, delay, ease: 'easeInOut' } }} />
   );
-
-  const horizLine = (d0, d1, d1p, wd, delay, key) => (
+  
+  const horizLine = (d0, d1, delay, key) => (
     <motion.path key={key} fill="none" stroke={NET} strokeWidth={netW} strokeLinecap="round" strokeLinejoin="round"
       initial={{ d: d0, opacity: 0, pathLength: 0 }}
-      animate={{ d: stage === 'whip' ? [d1, d1p, d1] : inGoal ? d1 : d0, opacity: inGoal ? 1 : 0, pathLength: inGoal ? 1 : 0 }}
-      transition={{ d: stage === 'whip' ? { duration: 0.5, delay: wd, ease: [0.22, 1, 0.36, 1], times: [0, 0.4, 1] } : { duration: 0.8, ease: 'easeInOut' }, opacity: { duration: 0.4, delay }, pathLength: { duration: 0.6, delay, ease: 'easeInOut' } }} />
+      animate={{ d: inGoal ? d1 : d0, opacity: inGoal ? 1 : 0, pathLength: inGoal ? 1 : 0 }}
+      transition={{ d: { duration: 0.8, ease: 'easeInOut' }, opacity: { duration: 0.4, delay }, pathLength: { duration: 0.6, delay, ease: 'easeInOut' } }} />
   );
 
   const markLine = (d, delay, key) => (
     <motion.path key={key} d={d} fill="none" stroke={NET} strokeWidth={markW} strokeLinecap="round" strokeLinejoin="round"
       initial={{ pathLength: 0, opacity: 0 }}
       animate={{ pathLength: marksOn ? 1 : 0, opacity: marksOn && !inGoal ? 1 : 0 }}
-      transition={{ pathLength: { duration: 0.7, delay, ease: 'easeInOut' }, opacity: { duration: 0.25, delay } }} />
+      transition={{ pathLength: { duration: 0.7, delay, ease: 'easeInOut' }, opacity: { duration: 0.25, delay: marksOn && !inGoal ? delay : 0 } }} />
   );
 
   return (
     <motion.div
       ref={overlay}
-      className="loading-screen fixed inset-0 z-[200] overflow-hidden"
+      className="fixed inset-0 z-[200] overflow-hidden"
       aria-hidden="true"
       style={{ background: 'linear-gradient(175deg, var(--bg-light) 0%, var(--bg) 30%, var(--bg-deep) 100%)' }}
       initial={{ opacity: 1 }}
@@ -365,18 +280,6 @@ function LoadingScreen({ onDone }) {
               <stop offset="90%" stopColor="#f5c542" />
               <stop offset="100%" stopColor="transparent" />
             </radialGradient>
-            {/* Clip for the net group. Full-screen while the pitch is on (so the
-                white pitch lines run edge to edge), then shrinks to the goal
-                mouth as the goal forms so the whiplash can never push a rope past
-                the posts / crossbar / goal line. */}
-            <clipPath id="ls-goal-mouth">
-              <motion.rect
-                initial={{ x: geo.L, y: geo.Tp, width: geo.W, height: geo.H }}
-                animate={inGoal
-                  ? { x: geo.fL, y: geo.fT, width: geo.fR - geo.fL, height: geo.fB - geo.fT }
-                  : { x: geo.L, y: geo.Tp, width: geo.W, height: geo.H }}
-                transition={{ duration: 0.8, ease: 'easeInOut' }} />
-            </clipPath>
           </defs>
 
           {/* pitch floor morphs from rectangle to trapezoid */}
@@ -408,32 +311,26 @@ function LoadingScreen({ onDone }) {
           <motion.circle cx={geo.cc.x} cy={geo.cc.y} r={geo.ccR} fill="none" stroke={NET} strokeWidth={markW}
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{ pathLength: marksOn ? 1 : 0, opacity: marksOn && !inGoal ? 1 : 0 }}
-            transition={{ pathLength: { duration: 0.7, delay: 0.1, ease: 'easeInOut' }, opacity: { duration: 0.25, delay: 0.1 } }} />
+            transition={{ pathLength: { duration: 0.7, delay: 0.1, ease: 'easeInOut' }, opacity: { duration: 0.25, delay: marksOn && !inGoal ? 0.1 : 0 } }} />
           {geo.spots.map((sp, i) => (
             <motion.circle key={i} cx={sp.x} cy={sp.y} r={Math.max(2, geo.d * 0.045)} fill={NET}
-              initial={{ opacity: 0 }} animate={{ opacity: marksOn && !inGoal ? 1 : 0 }} transition={{ duration: 0.25, delay: 0.25 }} />
+              initial={{ opacity: 0 }} animate={{ opacity: marksOn && !inGoal ? 1 : 0 }} transition={{ duration: 0.25, delay: marksOn && !inGoal ? 0.25 : 0 }} />
           ))}
 
-          {/* NET group — clipped to the goal mouth (static outer <g>) as a safety
-              net. The whiplash is now done per-rope (localised pocket that ripples
-              out from the impact and springs back), so the net's edges stay tied
-              to the posts / crossbar / goal line instead of shifting as a block. */}
-          <g clipPath="url(#ls-goal-mouth)">
-            <g>
-              {geo.verts.map((v, i) => vertLine(v.d0, v.d1, v.d1p, v.wd, 0.12 + i * 0.03, `v${i}`))}
-              {geo.horizs.map((h, i) => horizLine(h.d0, h.d1, h.d1p, h.wd, 0.12 + i * 0.03, `h${i}`))}
-              {geo.sideNets.map((s, i) => (
-                <motion.path key={`sn${i}`} fill="none" stroke={NET} strokeWidth={netW} strokeLinecap="round" strokeLinejoin="round"
-                  initial={{ d: s.d0, opacity: 0, pathLength: 0 }}
-                  animate={{ d: stage === 'whip' ? [s.d1, s.d1p, s.d1] : inGoal ? s.d1 : s.d0, opacity: inGoal ? 0.5 : 0, pathLength: inGoal ? 1 : 0 }}
-                  transition={{
-                    d: stage === 'whip' ? { duration: 0.5, delay: s.wd, ease: [0.22, 1, 0.36, 1], times: [0, 0.4, 1] } : { duration: 0.8, ease: 'easeInOut' },
-                    opacity: { duration: 0.4, delay: 0.16 + i * 0.02 },
-                    pathLength: { duration: 0.6, delay: 0.16 + i * 0.02, ease: 'easeInOut' }
-                  }} />
-              ))}
-            </g>
-          </g>
+          {/* NET group: vertical and horizontal ropes morph into perspective net */}
+          <motion.g
+            animate={{ scale: stage === 'whip' ? [1, 1.05, 0.98, 1.01, 1] : 1, y: stage === 'whip' ? [0, geo.d * 0.25, -geo.d * 0.05, 0] : 0 }}
+            transition={{ duration: 0.65, ease: 'easeOut' }}
+            style={{ transformOrigin: `${geo.cx}px ${geo.cy}px` }}>
+            {geo.verts.map((v, i) => vertLine(v.d0, v.d1, 0.12 + i * 0.03, `v${i}`))}
+            {geo.horizs.map((h, i) => horizLine(h.d0, h.d1, 0.12 + i * 0.03, `h${i}`))}
+            {geo.sideNets.map((d, i) => (
+              <motion.path key={`sn${i}`} d={d} fill="none" stroke={NET} strokeWidth={netW} strokeLinecap="round" strokeLinejoin="round"
+                initial={{ opacity: 0, pathLength: 0 }}
+                animate={{ opacity: inGoal ? 0.5 : 0, pathLength: inGoal ? 1 : 0 }}
+                transition={{ opacity: { duration: 0.4, delay: 0.16 + i * 0.02 }, pathLength: { duration: 0.6, delay: 0.16 + i * 0.02, ease: 'easeInOut' } }} />
+            ))}
+          </motion.g>
 
           {/* back frame + depth edges — the goal's perspective depth */}
           <motion.path d={geo.backFrame} fill="none" stroke={GOLD} strokeLinecap="round" strokeLinejoin="round" strokeWidth={frameThin}
@@ -489,55 +386,19 @@ function LoadingScreen({ onDone }) {
         animate={stage === 'whip' ? { scale: [0.4, 2.6], opacity: [0.6, 0] } : { opacity: 0 }}
         transition={{ duration: 0.7, ease: 'easeOut' }} />
 
-      {/* motion-blur trail — blurred ghosts that lag the ball along the strike
-          arc, selling the speed & weight of the shot. */}
-      {geo && geo.ok && [0, 1].map((i) => {
-        const dl = 0.05 + i * 0.06;
-        return (
-          <motion.div key={`ball-ghost-${i}`} aria-hidden="true"
-            style={{ position: 'absolute', left: geo.cx - geo.d / 2, top: geo.cy - geo.d / 2, width: geo.d, height: geo.d,
-                     borderRadius: geo.d * 0.2, pointerEvents: 'none', willChange: 'transform',
-                     background: 'radial-gradient(circle at 38% 32%, rgba(255,255,255,0.6), rgba(221,229,240,0.28) 68%, transparent 75%)',
-                     filter: `blur(${7 + i * 6}px)` }}
-            initial={{ x: geo.shootFromX, y: geo.belowOffset, opacity: 0, scaleX: 0.84, scaleY: 1.22 }}
-            animate={
-              stage === 'shoot' ? { x: 0, y: 0, opacity: 0.42 - i * 0.16, scaleX: 0.9, scaleY: 1.18 }
-              : ballShot ? { x: 0, y: 0, opacity: 0, scaleX: 1, scaleY: 1 }
-              : { x: geo.shootFromX, y: geo.belowOffset, opacity: 0, scaleX: 0.84, scaleY: 1.22 }
-            }
-            transition={{
-              x: { duration: 0.92, ease: [0.2, 0.85, 0.3, 1], delay: dl },
-              y: { duration: 0.92, ease: [0.18, 0.72, 0.24, 1], delay: dl },
-              opacity: { duration: 0.14 },
-            }} />
-        );
-      })}
-
-      {/* the ball — struck from below on a weighty curving arc into the net:
-          launches stretched, relaxes as it slows, squashes on impact (whip),
-          then rests as the "0". The lateral x ease + slower y spring make the
-          path curve rather than rise straight up. */}
+      {/* the ball — struck from below into the net, then rests as the "0" */}
       <motion.div ref={ball}
         style={{ position: 'absolute', willChange: 'transform', pointerEvents: 'none' }}
-        initial={{ x: geo ? geo.shootFromX : 0, y: geo ? geo.belowOffset : 800, opacity: 0, rotate: 220, scaleX: 0.84, scaleY: 1.22 }}
+        initial={{ y: geo ? geo.belowOffset : 800, opacity: 0, rotate: 220, scale: 1 }}
         animate={
-          stage === 'shoot' ? { x: 0, y: 0, opacity: 1, rotate: 0, scaleX: 1, scaleY: 1 }
-          : stage === 'whip' ? { x: 0, y: [0, geo ? geo.d * 0.13 : 0, 0], opacity: 1, rotate: 0, scaleX: [1.16, 0.95, 1.02, 1], scaleY: [0.84, 1.04, 0.99, 1] }
-          : ballShot ? { x: 0, y: 0, opacity: 1, rotate: 0, scaleX: 1, scaleY: 1 }
-          : { x: geo ? geo.shootFromX : 0, y: geo ? geo.belowOffset : 800, opacity: 0, rotate: 220, scaleX: 0.84, scaleY: 1.22 }
+          ballShot ? { y: 0, opacity: 1, rotate: 0, scale: stage === 'whip' ? [1, 1.08, 0.96, 1] : 1 }
+          : { y: geo ? geo.belowOffset : 800, opacity: 0, rotate: 220, scale: 1 }
         }
         transition={{
-          x: { duration: 0.92, ease: [0.2, 0.85, 0.3, 1] },
-          // Deterministic flight that LANDS just before 'whip' (shoot→whip is 1.0s),
-          // so the net ripple fires exactly on contact instead of guessing when a
-          // spring happens to arrive. Heavy easeOut = weighty decel into the net.
-          y: stage === 'whip'
-            ? { duration: 0.5, times: [0, 0.4, 1], ease: [0.33, 0, 0.3, 1] }   // sink into the pocket, then settle
-            : { duration: 0.92, ease: [0.18, 0.72, 0.24, 1] },                 // weighty arrival, lands ~80ms before whip
-          rotate: { duration: 1.0, ease: [0.34, 1.4, 0.64, 1] },
-          opacity: { duration: 0.14 },
-          scaleX: { duration: 0.5, ease: 'easeOut' },
-          scaleY: { duration: 0.5, ease: 'easeOut' },
+          y: { type: 'spring', stiffness: 540, damping: 15, mass: 0.8 },
+          rotate: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+          opacity: { duration: 0.12 },
+          scale: { duration: 0.45, ease: 'easeOut' },
         }}>
         <svg viewBox="0 0 100 100" style={{ display: 'block', width: '100%', height: '100%', filter: 'drop-shadow(0 8px 18px rgba(8,18,40,0.55))' }}>
           <defs>

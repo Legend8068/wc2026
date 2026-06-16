@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import LottieComponent from 'lottie-react';
 import D from '../data';
 import RevealSection from './RevealSection';
 import BrandText from './BrandText';
+import jugglingAnim from '../assets/juggling.json';
+
+const Lottie = LottieComponent.default || LottieComponent;
 
 function ScoreDisplay({ value }) {
   const [pop, setPop] = useState(false);
@@ -189,14 +193,16 @@ function ChampionsBox({ champion }) {
         <path d="M10 16.5h4V20h-4z"></path>
       </svg>
       <div className="b-champ-label">WORLD CHAMPIONS</div>
-      <div className="b-champ-team">
-        {champion && (
-          <>
-            <img src={D.flag(champion)} alt="" />
-            <span>{team?.name}</span>
-          </>
-        )}
-      </div>
+      {champion ? (
+        <div className="b-champ-team">
+          <img src={D.flag(champion)} alt="" />
+          <span>{team?.name}</span>
+        </div>
+      ) : (
+        <div className="b-champ-await">
+          <Lottie animationData={jugglingAnim} loop={true} style={{ width: 120, height: 120 }} />
+        </div>
+      )}
     </div>
   );
 }
@@ -310,6 +316,27 @@ function RoundCol({ matches, colCls, label, states, teams }) {
 }
 
 export default function Bracket({ snapshot }) {
+  const scrollRef = useRef(null);
+  const centeredRef = useRef(false);
+
+  // On first mount, pin the horizontal scroll to the middle so the FINAL /
+  // champion column is centred rather than starting at the Round-of-32 edge.
+  useEffect(() => {
+    if (centeredRef.current) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const center = () => {
+      if (el.scrollWidth > el.clientWidth) {
+        el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+        centeredRef.current = true;
+      }
+    };
+    center();
+    // Retry next frame in case layout/fonts settle the width slightly later.
+    const raf = requestAnimationFrame(center);
+    return () => cancelAnimationFrame(raf);
+  });
+
   if (!snapshot) return null;
 
   const { states, teams, champion } = snapshot;
@@ -328,7 +355,7 @@ export default function Bracket({ snapshot }) {
         </div>
         <div className="rule r"></div>
       </div>
-      <div className="bracket-scroll">
+      <div className="bracket-scroll" ref={scrollRef}>
         <div className="bracket" id="bracket-root">
           <RoundCol matches={ko('R32', 'L')} colCls="b-col-32" label="ROUND OF 32" states={states} teams={teams} />
           <ConnCol matches={ko('R32', 'L')} states={states} teams={teams} dir="to-r" />

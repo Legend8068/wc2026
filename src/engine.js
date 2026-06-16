@@ -17,6 +17,15 @@ const hash = (str) => {
   return h >>> 0;
 };
 
+const norm = (s) => s.toLowerCase().normalize('NFD')
+  .replace(/-/g, ' ')
+  .replace(/[̀-ͯ]/g, '').replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
+
+const lastTok = (s) => {
+  const t = norm(s).split(' ').filter(Boolean);
+  return t[t.length - 1] || '';
+};
+
 const mulberry32 = (seed) => () => {
   seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
   let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -102,6 +111,180 @@ function getPlayerName(teamCode, playerIndex) {
   return `${first[0]}. ${last}`;
 }
 
+/* ---------- deterministic line-ups ----------
+   No public feed carries XIs, so (like the player-name mocks above) we derive a
+   stable formation, starting XI and bench for each side from the match id + team
+   code. Same inputs → same line-up on every render and reload. */
+const FORMATIONS = {
+  '4-3-3':   { DEF: 4, MID: 3, FWD: 3 },
+  '4-2-3-1': { DEF: 4, MID: 5, FWD: 1 },
+  '4-4-2':   { DEF: 4, MID: 4, FWD: 2 },
+  '3-5-2':   { DEF: 3, MID: 5, FWD: 2 },
+};
+const NUM_PREFS = {
+  GK:  [1, 12, 23],
+  DEF: [2, 3, 4, 5, 6, 15, 22, 24],
+  MID: [8, 10, 7, 14, 18, 20, 16, 25],
+  FWD: [9, 11, 19, 21, 17, 26],
+};
+
+function teamLineup(matchId, team) {
+  const rng = mulberry32(hash(`${matchId}:${team}:lineup`));
+  const formKeys = Object.keys(FORMATIONS);
+  const formation = formKeys[Math.floor(rng() * formKeys.length)];
+  const shape = FORMATIONS[formation];
+
+  const usedNames = new Set();
+  // A fresh generated name (initial + surname) that hasn't been used in THIS
+  // line-up — used for the keeper and the bench so they never collide with the
+  // curated outfield stars.
+  const genName = () => {
+    let n, guard = 0;
+    do {
+      const f = MOCK_FIRSTNAMES[Math.floor(rng() * MOCK_FIRSTNAMES.length)];
+      const l = MOCK_LASTNAMES[Math.floor(rng() * MOCK_LASTNAMES.length)];
+      n = `${f[0]}. ${l}`;
+    } while (usedNames.has(n) && guard++ < 40);
+    usedNames.add(n);
+    return n;
+  };
+  // Curated stars are ordered roughly forward→back; consume them for the
+  // outfield XI (FWD → MID → DEF), then fall back to generated names.
+  const stars = (MOCK_PLAYERS[team] || []).filter(n => !usedNames.has(n));
+  const pickOutfield = () => {
+    while (stars.length) { const n = stars.shift(); if (!usedNames.has(n)) { usedNames.add(n); return n; } }
+    return genName();
+  };
+
+  const usedNums = new Set();
+  const numFor = (pos) => {
+    for (const n of NUM_PREFS[pos]) if (!usedNums.has(n)) { usedNums.add(n); return n; }
+    let x = 2; while (usedNums.has(x)) x++; usedNums.add(x); return x;
+  };
+
+  const gk = { name: genName(), pos: 'GK', num: numFor('GK') };
+  const fwd = Array.from({ length: shape.FWD }, () => pickOutfield());
+  const mid = Array.from({ length: shape.MID }, () => pickOutfield());
+  const def = Array.from({ length: shape.DEF }, () => pickOutfield());
+
+  const xi = [
+    gk,
+    ...def.map((name) => ({ name, pos: 'DEF', num: numFor('DEF') })),
+    ...mid.map((name) => ({ name, pos: 'MID', num: numFor('MID') })),
+    ...fwd.map((name) => ({ name, pos: 'FWD', num: numFor('FWD') })),
+  ];
+
+  const subPos = ['GK', 'DEF', 'DEF', 'MID', 'MID', 'FWD', 'FWD'];
+  const subs = subPos.map((pos) => ({ name: genName(), pos, num: numFor(pos) }));
+
+  /* ---------- second-half starting XI ----------
+     Most matches see 0–2 changes at the interval. We derive them deterministically
+     and produce the XI that walks out for the second half. Each incoming bench
+     player inherits the OUTGOING player's slot (index + line position) so the
+     formation shape stays intact and players land in their exact spots. */
+  const htRng = mulberry32(hash(`${matchId}:${team}:htsubs`));
+  const roll = htRng();
+  const nSubs = roll < 0.45 ? 0 : roll < 0.8 ? 1 : 2;
+
+  const xi2 = xi.map((p) => ({ ...p }));
+  const bench = subs.map((p) => ({ ...p }));
+  const htSubs = [];
+  const usedSlots = new Set([0]); // never replace the keeper at the break
+  for (let k = 0; k < nSubs; k++) {
+    let slot = 1 + Math.floor(htRng() * (xi2.length - 1));
+    let guard = 0;
+    while (usedSlots.has(slot) && guard++ < 24) slot = 1 + Math.floor(htRng() * (xi2.length - 1));
+    if (usedSlots.has(slot)) break;
+    const out = xi2[slot];
+    let bi = bench.findIndex((s) => s.pos === out.pos);   // like-for-like first
+    if (bi === -1) bi = bench.findIndex((s) => s.pos !== 'GK');
+    if (bi === -1) break;
+    const inP = bench.splice(bi, 1)[0];
+    // Incoming player keeps own name/number, takes the slot's line position.
+    xi2[slot] = { ...inP, pos: out.pos, on: true };
+    usedSlots.add(slot);
+    htSubs.push({ off: out, on: xi2[slot] });
+  }
+
+  return { formation, xi, subs, formation2: formation, xi2, htSubs };
+}
+
+export function lineups(matchId, a, b) {
+  return { home: teamLineup(matchId, a), away: teamLineup(matchId, b) };
+}
+
+/* ---------- simulated per-player badges ----------
+   The live feed attaches real goal/assist/card/sub/injury events to line-up
+   players; in DEMO/SIM mode we synthesize the same, kept consistent with the
+   current scoreline and minute so the graphic shows the markers too. */
+function decorateSide(side, matchId, team, isHomeSide, details, minute) {
+  if (!side) return;
+  const evByNum = {};
+  const ensure = (num) => (evByNum[num] ||
+    (evByNum[num] = { goals: 0, assists: 0, yellow: false, red: false, subOff: null, subOn: null, injured: false }));
+
+  const findByName = (name) => {
+    if (!name) return null;
+    const normName = norm(name);
+    const last = lastTok(name);
+
+    // First try starting XI
+    let found = side.xi.find(p => {
+      const n = norm(p.name);
+      return n === normName || lastTok(p.name) === last;
+    });
+    if (found) return found;
+
+    // Then try substitutes list
+    found = side.subs.find(p => {
+      const n = norm(p.name);
+      return n === normName || lastTok(p.name) === last;
+    });
+    return found;
+  };
+
+  (details || []).forEach(d => {
+    if (d.isHome !== isHomeSide) return;
+    if (d.type === 'goal') {
+      const scorer = findByName(d.player);
+      if (scorer) ensure(scorer.num).goals++;
+      if (d.assist) {
+        const assister = findByName(d.assist);
+        if (assister) ensure(assister.num).assists++;
+      }
+    } else if (d.type === 'yellow') {
+      const p = findByName(d.player);
+      if (p) ensure(p.num).yellow = true;
+    } else if (d.type === 'red') {
+      const p = findByName(d.player);
+      if (p) ensure(p.num).red = true;
+    }
+  });
+
+  // Half-time subs walk out for the second half.
+  if (minute > 45 && side.htSubs) {
+    side.htSubs.forEach(s => { ensure(s.on.num).subOn = "45'"; ensure(s.off.num).subOff = "45'"; });
+  }
+  // One knock late in the game.
+  const rng = mulberry32(hash(`${matchId}:${team}:injuries`));
+  if (minute > 60 && rng() < 0.4) {
+    const cand = side.xi[1 + Math.floor(rng() * (side.xi.length - 1))];
+    if (cand) ensure(cand.num).injured = true;
+  }
+
+  const apply = (p) => { if (evByNum[p.num]) p.ev = evByNum[p.num]; };
+  side.xi.forEach(apply);
+  if (side.xi2) side.xi2.forEach(apply);
+  side.subs.forEach(apply);
+}
+
+export function applySimBadges(lu, fx, st) {
+  if (!lu || !st || st.status === 'pre') return lu;
+  decorateSide(lu.home, fx.id, fx.a, true, st.details || [], st.minute || 0);
+  decorateSide(lu.away, fx.id, fx.b, false, st.details || [], st.minute || 0);
+  return lu;
+}
+
 /* Simulated state of one match at virtual time `now`. */
 function simulate(matchId, a, b, kickoff, knockout, now) {
   const ph = phase(now, kickoff);
@@ -147,11 +330,19 @@ function simulate(matchId, a, b, kickoff, knockout, now) {
     if (min <= m) {
       const isPenalty = hash(`${matchId}:goal:home:${idx}`) % 10 === 0;
       const isOwnGoal = hash(`${matchId}:goal:home:${idx}`) % 20 === 0;
+      let assist = '';
+      if (!isOwnGoal && !isPenalty) {
+        const hasAssist = hash(`${matchId}:assist:home:${idx}`) % 10 < 7;
+        if (hasAssist) {
+          assist = getPlayerName(a, idx + min + 1);
+        }
+      }
       details.push({
         type: 'goal',
         typeText: isOwnGoal ? 'Own Goal' : isPenalty ? 'Penalty Goal' : 'Goal',
         clock: `${min}'`,
         player: getPlayerName(isOwnGoal ? b : a, idx + min),
+        assist,
         isHome: true,
         ownGoal: isOwnGoal,
         penalty: isPenalty
@@ -163,11 +354,19 @@ function simulate(matchId, a, b, kickoff, knockout, now) {
     if (min <= m) {
       const isPenalty = hash(`${matchId}:goal:away:${idx}`) % 10 === 0;
       const isOwnGoal = hash(`${matchId}:goal:away:${idx}`) % 20 === 0;
+      let assist = '';
+      if (!isOwnGoal && !isPenalty) {
+        const hasAssist = hash(`${matchId}:assist:away:${idx}`) % 10 < 7;
+        if (hasAssist) {
+          assist = getPlayerName(b, idx + min + 1);
+        }
+      }
       details.push({
         type: 'goal',
         typeText: isOwnGoal ? 'Own Goal' : isPenalty ? 'Penalty Goal' : 'Goal',
         clock: `${min}'`,
         player: getPlayerName(isOwnGoal ? a : b, idx + min),
+        assist,
         isHome: false,
         ownGoal: isOwnGoal,
         penalty: isPenalty
@@ -198,6 +397,14 @@ function simulate(matchId, a, b, kickoff, knockout, now) {
     return minX - minY;
   });
 
+  const venueList = [
+    'Mercedes-Benz Stadium', 'Gillette Stadium', 'AT&T Stadium', 'NRG Stadium',
+    'Arrowhead Stadium', 'SoFi Stadium', 'Hard Rock Stadium', 'MetLife Stadium',
+    'Lincoln Financial Field', "Levi's Stadium", 'Lumen Field', 'BMO Field',
+    'BC Place', 'Estadio Azteca', 'Estadio Akron', 'Estadio BBVA'
+  ];
+  const assignedVenue = venueList[hash(`${matchId}:venue`) % venueList.length];
+
   const out = {
     status: ph.status,
     sa,
@@ -217,7 +424,8 @@ function simulate(matchId, a, b, kickoff, knockout, now) {
       shotsOnTarget: String(aSOG),
       foulsCommitted: String(aFouls),
       wonCorners: String(aCorners)
-    }
+    },
+    venue: assignedVenue
   };
 
   if (ph.status === 'ft' && knockout) {
@@ -232,7 +440,7 @@ export function computeStandings(states) {
   const standings = {};
   for (const [g, codes] of Object.entries(D.GROUPS)) {
     const rows = {};
-    codes.forEach(c => { rows[c] = { code: c, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; });
+    codes.forEach(c => { rows[c] = { code: c, group: g, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0, qualified: false }; });
     for (const fx of D.GROUP_FIXTURES) {
       if (fx.group !== g) continue;
       const st = states[fx.id];
@@ -243,8 +451,9 @@ export function computeStandings(states) {
       else if (st.sa < st.sb) { B.w++; A.l++; B.pts += 3; }
       else { A.d++; B.d++; A.pts++; B.pts++; }
     }
+    Object.values(rows).forEach(r => { r.gd = r.gf - r.ga; });
     standings[g] = Object.values(rows).sort((x, y) =>
-      y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf ||
+      y.pts - x.pts || y.gd - x.gd || y.gf - x.gf ||
       codes.indexOf(x.code) - codes.indexOf(y.code));
     standings[g].forEach((r, i) => { r.rank = i + 1; });
   }
@@ -255,9 +464,107 @@ export const groupComplete = (g, states) =>
   D.GROUP_FIXTURES.filter(f => f.group === g).every(f => states[f.id] && states[f.id].status === 'ft');
 
 export function bestThirds(standings) {
-  return Object.values(standings).map(rows => rows[2])
-    .sort((x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf)
-    .slice(0, 8).map(r => r.code);
+  return rankThirds(standings).slice(0, 8).map(r => r.code);
+}
+
+export function rankThirds(standings) {
+  return Object.entries(standings).map(([group, rows]) => ({ ...rows[2], group }))
+    .sort((x, y) => y.pts - x.pts || y.gd - x.gd || y.gf - x.gf || x.group.localeCompare(y.group))
+    .map((r, i) => ({ ...r, thirdRank: i + 1 }));
+}
+
+function enumerateGroupOutcomes(group, states, standings) {
+  const codes = D.GROUPS[group];
+  const fixtures = D.GROUP_FIXTURES.filter(f => f.group === group);
+  const remaining = fixtures.filter(f => !states[f.id] || states[f.id].status !== 'ft');
+  const basePts = {};
+  standings[group].forEach(r => { basePts[r.code] = r.pts; });
+
+  const outcomes = [];
+  const walk = (idx, pts) => {
+    if (idx >= remaining.length) {
+      const sorted = codes.map(code => ({ code, pts: pts[code] }))
+        .sort((a, b) => b.pts - a.pts || codes.indexOf(a.code) - codes.indexOf(b.code));
+      outcomes.push({ pts: { ...pts }, thirdPts: sorted[2].pts });
+      return;
+    }
+    const fx = remaining[idx];
+
+    const homeWin = { ...pts, [fx.a]: pts[fx.a] + 3 };
+    walk(idx + 1, homeWin);
+
+    const draw = { ...pts, [fx.a]: pts[fx.a] + 1, [fx.b]: pts[fx.b] + 1 };
+    walk(idx + 1, draw);
+
+    const awayWin = { ...pts, [fx.b]: pts[fx.b] + 3 };
+    walk(idx + 1, awayWin);
+  };
+
+  walk(0, basePts);
+  return outcomes;
+}
+
+function applyQualificationFlags(standings, states, allGroupsDone) {
+  const rankedThirds = rankThirds(standings);
+  const finalBestThirdCodes = new Set(allGroupsDone ? rankedThirds.slice(0, 8).map(r => r.code) : []);
+
+  if (allGroupsDone) {
+    Object.values(standings).forEach(rows => {
+      rows.forEach(r => {
+        r.qualified = r.rank <= 2 || finalBestThirdCodes.has(r.code);
+        r.qualificationRoute = r.rank <= 2 ? 'group' : finalBestThirdCodes.has(r.code) ? 'third' : null;
+      });
+    });
+    return rankedThirds.map(r => ({
+      ...r,
+      qualified: finalBestThirdCodes.has(r.code),
+      qualificationRoute: finalBestThirdCodes.has(r.code) ? 'third' : null
+    }));
+  }
+
+  const outcomesByGroup = {};
+  const maxThirdPtsByGroup = {};
+  Object.keys(D.GROUPS).forEach(g => {
+    outcomesByGroup[g] = enumerateGroupOutcomes(g, states, standings);
+    maxThirdPtsByGroup[g] = Math.max(...outcomesByGroup[g].map(o => o.thirdPts));
+  });
+
+  Object.entries(standings).forEach(([group, rows]) => {
+    const groupOutcomes = outcomesByGroup[group];
+
+    rows.forEach(row => {
+      let sawThirdRoute = false;
+      const qualifiesInEveryOutcome = groupOutcomes.every(outcome => {
+        const teamPts = outcome.pts[row.code];
+        const worstRank = D.GROUPS[group]
+          .filter(code => code !== row.code && outcome.pts[code] >= teamPts)
+          .length + 1;
+
+        if (worstRank <= 2) return true;
+        if (worstRank > 3) return false;
+
+        const groupsAbleToOvertake = Object.entries(maxThirdPtsByGroup)
+          .filter(([otherGroup, maxPts]) => otherGroup !== group && maxPts >= teamPts)
+          .length;
+
+        const thirdRouteIsSafe = groupsAbleToOvertake <= 7;
+        if (thirdRouteIsSafe) sawThirdRoute = true;
+        return thirdRouteIsSafe;
+      });
+
+      row.qualified = qualifiesInEveryOutcome;
+      row.qualificationRoute = qualifiesInEveryOutcome ? (sawThirdRoute ? 'third' : 'group') : null;
+    });
+  });
+
+  return rankThirds(standings).map(r => {
+    const source = standings[r.group].find(row => row.code === r.code);
+    return {
+      ...r,
+      qualified: Boolean(source && source.qualified),
+      qualificationRoute: source ? source.qualificationRoute : null
+    };
+  });
 }
 
 /* ---------- bracket resolution ---------- */
@@ -301,6 +608,7 @@ export function snapshot(now, mode, liveStates) {
 
   const standings = computeStandings(states);
   const allDone = Object.keys(D.GROUPS).every(g => groupComplete(g, states));
+  const thirdStandings = applyQualificationFlags(standings, states, allDone);
 
   const provider = mode === 'sim'
     ? (m, a, b, t) => simulate(m.id, a, b, m.ts, true, t)
@@ -316,5 +624,5 @@ export function snapshot(now, mode, liveStates) {
   const finalSt = states.M104;
   const champion = (finalSt && finalSt.status === 'ft' && finalSt.winner) ? finalSt.winner : null;
 
-  return { now, states, standings, teams, allGroupsDone: allDone, champion };
+  return { now, states, standings, thirdStandings, teams, allGroupsDone: allDone, champion };
 }
