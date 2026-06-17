@@ -16,6 +16,8 @@ export default function MusicPlayer() {
   const [showPlaylist, setShowPlaylist] = useState(false);
   const audioRef = useRef(null);
   const lottieRef = useRef(null);
+  const tracksRef = useRef(null);
+  const prevShowPlaylist = useRef(showPlaylist);
 
   const startedRef = useRef(false);
   const track = PLAYLIST[currentTrackIdx];
@@ -120,6 +122,46 @@ export default function MusicPlayer() {
     }
   }, [isPlaying]);
 
+  // Auto-scroll playlist
+  useEffect(() => {
+    let timer;
+    if (showPlaylist && tracksRef.current) {
+      const container = tracksRef.current;
+      const isJustOpening = !prevShowPlaylist.current;
+
+      const doScroll = (behavior, heightOverride) => {
+        const activeEl = container.querySelector('.mp-track-item.active');
+        if (activeEl) {
+          const cHeight = heightOverride || container.clientHeight;
+          if (cHeight > 0) {
+            container.scrollTo({
+              top: activeEl.offsetTop - (cHeight / 2) + (activeEl.offsetHeight / 2),
+              behavior
+            });
+          }
+        }
+      };
+
+      if (isJustOpening) {
+        // Pre-scroll instantly before/during the animation using the expected final height
+        doScroll('auto', Math.min(280, container.scrollHeight));
+        
+        // Follow up after the 400ms CSS transition finishes to ensure perfect centering
+        timer = setTimeout(() => {
+          doScroll('smooth');
+        }, 450);
+      } else {
+        // Track changed while playlist is already fully open
+        doScroll('smooth');
+      }
+    }
+    prevShowPlaylist.current = showPlaylist;
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [showPlaylist, currentTrackIdx]);
+
   // Update progress bar
   const handleTimeUpdate = () => {
     if (audioRef.current) {
@@ -164,7 +206,7 @@ export default function MusicPlayer() {
               <h4>World Cup Playlist</h4>
               <button className="mp-close-btn" onClick={() => setShowPlaylist(false)}>✕</button>
             </div>
-            <div className="mp-playlist-tracks">
+            <div className="mp-playlist-tracks" ref={tracksRef}>
               {PLAYLIST.map((t, idx) => (
                 <div 
                   key={idx} 

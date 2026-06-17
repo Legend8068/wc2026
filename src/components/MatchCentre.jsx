@@ -10,6 +10,20 @@ import balancingFootball from '../assets/balancing-football.json';
 
 const Lottie = LottieComp.default || LottieComp;
 
+const PenGoal = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,200,83,0.3))', display: 'inline-block', verticalAlign: 'middle' }}>
+    <circle cx="12" cy="12" r="10" fill="var(--green, #00c853)" />
+    <path d="M7 12.5L10 15.5L17 8.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const PenMiss = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ filter: 'drop-shadow(0 2px 4px rgba(226,0,26,0.3))', display: 'inline-block', verticalAlign: 'middle' }}>
+    <circle cx="12" cy="12" r="10" fill="var(--red, #e2001a)" />
+    <path d="M8 8L16 16M16 8L8 16" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+  </svg>
+);
+
 function ScoreDisplay({ value }) {
   const [pop, setPop] = useState(false);
   const prevVal = useRef(value);
@@ -110,6 +124,7 @@ export default function MatchCentre({ snapshot }) {
   const [expandedMatchId, setExpandedMatchId] = useState(null);
   // Real ESPN line-ups, lazily fetched when a card is expanded: fxId -> { eid, status, lu }
   const [lineupCache, setLineupCache] = useState({});
+  const [viewPens, setViewPens] = useState(false);
 
   // Preserve the horizontal scroll position of the strip across expand/collapse:
   // expanding filters the strip down to one card (scroll resets), so we remember
@@ -217,6 +232,7 @@ export default function MatchCentre({ snapshot }) {
       }
       // Expanding — remember where the user was in the horizontal list.
       if (stripRef.current) savedScrollRef.current = stripRef.current.scrollLeft;
+      setViewPens(false);
       return matchId;
     });
   };
@@ -279,9 +295,19 @@ export default function MatchCentre({ snapshot }) {
                 <span className="lcv-vs">VS</span>
               ) : (
                 <>
-                  <ScoreDisplay value={st.sa} />
+                  <div className="lcv-score-col">
+                    <ScoreDisplay value={st.sa} />
+                    {st.pensA !== undefined && st.pensA !== null && (st.pensA > 0 || st.pensB > 0) && (
+                      <span className="pens">({st.pensA})</span>
+                    )}
+                  </div>
                   <span className="lcv-colon">-</span>
-                  <ScoreDisplay value={st.sb} />
+                  <div className="lcv-score-col">
+                    <ScoreDisplay value={st.sb} />
+                    {st.pensB !== undefined && st.pensB !== null && (st.pensA > 0 || st.pensB > 0) && (
+                      <span className="pens">({st.pensB})</span>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -313,50 +339,77 @@ export default function MatchCentre({ snapshot }) {
             <div className="lc-drawer-left">
               {/* Timeline Section */}
               <div className="mc-timeline-section">
-                <div className="mc-details-header">MATCH EVENTS</div>
-                {!st.details || st.details.length === 0 ? (
-                  <div className="mc-no-events">No match events reported yet.</div>
-                ) : (
-                  <div className="mc-timeline">
-                    {st.details.map((ev, idx) => {
-                      const isHome = ev.isHome;
-                      return (
-                        <div className={`mc-timeline-row ${isHome ? 'home-event' : 'away-event'}`} key={idx}>
-                          <div className="mc-timeline-left">
-                            {isHome && (
-                              <div className="mc-event-wrapper">
-                                <div className="mc-event-content">
-                                  <span className="mc-player-name">{ev.player}</span>
-                                  <span className="mc-event-icon" title={ev.typeText}>{getEventIcon(ev)}</span>
-                                </div>
-                                {ev.assist && (
-                                  <div className="mc-event-assist">
-                                    👟 {ev.assist}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <div className="mc-timeline-middle">{ev.clock}</div>
-                          <div className="mc-timeline-right">
-                            {!isHome && (
-                              <div className="mc-event-wrapper">
-                                <div className="mc-event-content">
-                                  <span className="mc-event-icon" title={ev.typeText}>{getEventIcon(ev)}</span>
-                                  <span className="mc-player-name">{ev.player}</span>
-                                </div>
-                                {ev.assist && (
-                                  <div className="mc-event-assist">
-                                    👟 {ev.assist}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                {(st.pensA > 0 || st.pensB > 0) ? (
+                  <div className="mc-shootout-tabs">
+                    <button className={`mc-shootout-tab ${!viewPens ? 'active' : ''}`} onClick={() => setViewPens(false)}>MATCH EVENTS</button>
+                    <button className={`mc-shootout-tab ${viewPens ? 'active' : ''}`} onClick={() => setViewPens(true)}>PENALTIES</button>
                   </div>
+                ) : (
+                  <div className="mc-details-header">MATCH EVENTS</div>
+                )}
+                
+                {viewPens && (st.pensA > 0 || st.pensB > 0) ? (
+                  <div className="mc-shootout">
+                    <div className="so-header">
+                      <div className="so-col">{teamA.name}</div>
+                      <div className="so-col">ROUND</div>
+                      <div className="so-col">{teamB.name}</div>
+                    </div>
+                    {getShootoutSequence(fx.id, st.pensA, st.pensB).map((r, i) => (
+                      <div className="so-row" key={i}>
+                        <div className="so-res">{r.a ? <PenGoal /> : <PenMiss />}</div>
+                        <div className="so-rnd">{i + 1}</div>
+                        <div className="so-res">{r.b !== undefined ? (r.b ? <PenGoal /> : <PenMiss />) : ''}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    {!st.details || st.details.length === 0 ? (
+                      <div className="mc-no-events">No match events reported yet.</div>
+                    ) : (
+                      <div className="mc-timeline">
+                        {st.details.map((ev, idx) => {
+                          const isHome = ev.isHome;
+                          return (
+                            <div className={`mc-timeline-row ${isHome ? 'home-event' : 'away-event'}`} key={idx}>
+                              <div className="mc-timeline-left">
+                                {isHome && (
+                                  <div className="mc-event-wrapper">
+                                    <div className="mc-event-content">
+                                      <span className="mc-player-name">{ev.player}</span>
+                                      <span className="mc-event-icon" title={ev.typeText}>{getEventIcon(ev)}</span>
+                                    </div>
+                                    {ev.assist && (
+                                      <div className="mc-event-assist">
+                                        👟 {ev.assist}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="mc-timeline-middle">{ev.clock}</div>
+                              <div className="mc-timeline-right">
+                                {!isHome && (
+                                  <div className="mc-event-wrapper">
+                                    <div className="mc-event-content">
+                                      <span className="mc-event-icon" title={ev.typeText}>{getEventIcon(ev)}</span>
+                                      <span className="mc-player-name">{ev.player}</span>
+                                    </div>
+                                    {ev.assist && (
+                                      <div className="mc-event-assist">
+                                        👟 {ev.assist}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -432,4 +485,34 @@ export default function MatchCentre({ snapshot }) {
       </div>
     </RevealSection>
   );
+}
+
+function getShootoutSequence(fxId, pensA, pensB) {
+  pensA = pensA || 0;
+  pensB = pensB || 0;
+  const rounds = Math.max(5, pensA, pensB);
+  const getArr = (goals) => {
+    const a = Array(goals).fill(true);
+    while (a.length < rounds) a.push(false);
+    return a;
+  };
+  const arrA = getArr(pensA);
+  const arrB = getArr(pensB);
+  
+  let h = 0; 
+  if (fxId) {
+    for (let i = 0; i < fxId.length; i++) h += fxId.charCodeAt(i);
+  }
+  const shuf = (arr, seed) => {
+    let s = seed;
+    for (let i = arr.length - 1; i > 0; i--) {
+      s = (s * 16807) % 2147483647;
+      const j = s % (i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  };
+  shuf(arrA, h);
+  shuf(arrB, h + 1);
+
+  return Array.from({length: rounds}).map((_, i) => ({ a: arrA[i], b: arrB[i] }));
 }

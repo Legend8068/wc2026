@@ -1198,6 +1198,20 @@ section {
   padding: 6px 10px;
 }
 
+.lcv-score-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.lcv-score-col .pens {
+  font-size: 14px;
+  color: var(--gold);
+  margin-top: -2px;
+  font-family: var(--head);
+}
+
 @media (min-width: 640px) {
   .lcv-score-box {
     font-size: 52px;
@@ -1761,8 +1775,9 @@ section {
 }
 
 .ko-score {
-  width: 30px;
-  height: 26px;
+  min-width: 30px;
+  min-height: 26px;
+  padding: 4px 6px;
   border: none;
   border-radius: 8px;
   flex: none;
@@ -1777,9 +1792,9 @@ section {
 }
 
 .ko-score .pens {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--red-dark);
-  margin-left: 2px;
+  margin-left: 4px;
 }
 
 .ko-row.winner .ko-name {
@@ -1975,76 +1990,133 @@ section {
   letter-spacing: 0.06em;
 }
 
-.third-card {
+.third-card-v2 {
   position: absolute;
   bottom: 0;
-  left: 24px;
-  right: 24px;
+  left: 36px;
+  right: 36px;
   flex-shrink: 0;
-  background: var(--bg-card);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  background: var(--paper);
+  border: 2px solid #cd7f32;
   border-radius: var(--radius-md);
-  padding: 12px 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(205, 127, 50, 0.15);
 }
 
-.third-card .tp-head {
+.third-card-v2.is-live {
+  animation: third-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes third-glow {
+  0%, 100% {
+    box-shadow: 0 6px 20px rgba(205, 127, 50, 0.15), 0 0 10px rgba(205, 127, 50, 0.15);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(205, 127, 50, 0.3), 0 0 25px rgba(205, 127, 50, 0.4);
+  }
+}
+
+.third-head {
+  background: var(--ink);
   text-align: center;
-  font-family: var(--head);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  font-size: 14px;
-  color: var(--muted);
-  margin-bottom: 9px;
+  padding: 10px 0 8px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
-.third-card .tp-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: center;
-  font-family: var(--body);
+.third-head .t-title {
+  font-family: var(--display);
   font-weight: 700;
   font-size: 20px;
-  color: var(--white);
+  color: #cd7f32;
+  line-height: 1;
+  letter-spacing: 0.02em;
 }
 
-.third-card .tp-name {
-  flex: 1;
-  border-bottom: none;
-  min-height: 18px;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.third-card .tp-name.placeholder {
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 13px;
+.third-head .t-sub {
   font-family: var(--head);
+  font-weight: 500;
   letter-spacing: 0.08em;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
 }
 
-.third-card .tp-score {
-  width: 26px;
-  height: 22px;
-  border: none;
-  border-radius: 8px;
-  flex: none;
+.third-body {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.third-body .ko-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-family: var(--head);
-  font-weight: 700;
-  font-size: 13px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--white);
+  gap: 12px;
 }
 
-.third-card .tp-v {
+.third-body .ko-row .flagchip {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.third-body .ko-row .seal {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.third-body .ko-row .ko-name {
+  flex: 1;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--ink);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.third-body .ko-row .ko-name.placeholder {
+  color: var(--muted-warm);
+  font-family: var(--head);
+  letter-spacing: 0.05em;
+  font-size: 12px;
+}
+
+.third-body .ko-row .ko-score {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.third-body .ko-row .ko-score .pens {
+  font-size: 12px;
+  color: #cd7f32;
+}
+
+.third-body .ko-row.winner .ko-score {
+  color: #cd7f32;
+}
+.third-body .ko-row.loser .ko-name,
+.third-body .ko-row.loser .ko-score {
+  opacity: 0.4;
+}
+
+.third-vs {
+  text-align: center;
   font-family: var(--head);
   font-weight: 700;
-  font-size: 13px;
-  color: var(--muted);
+  font-size: 18px;
+  color: var(--muted-warm);
+  letter-spacing: 0.06em;
 }
 
 /* ============================== GROUPS ============================== */
@@ -3962,6 +4034,7 @@ footer .f-note {
 }
 
 .mp-playlist-tracks {
+  position: relative;
   max-height: 280px;
   overflow-y: auto;
   padding: 8px 0;
@@ -5178,4 +5251,92 @@ footer .f-note {
 @keyframes hm-tag-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
+}
+
+/* ---- Shootout tab and flow styles ---- */
+.mc-shootout-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.mc-shootout-tab {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.04);
+  border: none;
+  font-family: var(--head);
+  font-weight: 800;
+  font-size: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  color: var(--muted-warm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.1em;
+}
+
+.mc-shootout-tab:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.mc-shootout-tab.active {
+  background: var(--ink);
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.mc-shootout {
+  display: flex;
+  flex-direction: column;
+}
+
+.so-header {
+  display: grid;
+  grid-template-columns: 1fr 50px 1fr;
+  align-items: center;
+  text-align: center;
+  font-family: var(--head);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted-warm);
+  padding: 12px 10px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.so-row {
+  display: grid;
+  grid-template-columns: 1fr 50px 1fr;
+  align-items: center;
+  text-align: center;
+  padding: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: background 0.2s ease;
+}
+
+.so-row:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.so-rnd {
+  font-family: var(--head);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.04);
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.so-res {
+  font-size: 18px;
+  filter: grayscale(0.2);
+  transition: transform 0.2s ease;
+}
+
+.so-row:hover .so-res {
+  transform: scale(1.1);
 }

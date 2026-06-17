@@ -39,6 +39,7 @@ function KoCard({ m, st, teams }) {
 
     const scoreVal = st && st.sa !== null ? (side === 0 ? st.sa : st.sb) : null;
     const pensVal = st && st.pensA !== null ? (side === 0 ? st.pensA : st.pensB) : null;
+    const hasPens = st && st.pensA !== null && (st.pensA > 0 || st.pensB > 0);
 
     return (
       <div className={rowCls} data-side={side}>
@@ -54,7 +55,7 @@ function KoCard({ m, st, teams }) {
           {scoreVal !== null ? (
             <>
               <ScoreDisplay value={scoreVal} />
-              {pensVal !== null && (
+              {hasPens && pensVal !== null && (
                 <span className="pens">({pensVal})</span>
               )}
             </>
@@ -99,6 +100,7 @@ function FinalCard({ m, st, teams }) {
 
     const scoreVal = st && st.sa !== null ? (side === 0 ? st.sa : st.sb) : null;
     const pensVal = st && st.pensA !== null ? (side === 0 ? st.pensA : st.pensB) : null;
+    const hasPens = st && st.pensA !== null && (st.pensA > 0 || st.pensB > 0);
 
     return (
       <div className={rowCls} data-side={side}>
@@ -114,7 +116,7 @@ function FinalCard({ m, st, teams }) {
           {scoreVal !== null ? (
             <>
               <ScoreDisplay value={scoreVal} />
-              {pensVal !== null && (
+              {hasPens && pensVal !== null && (
                 <span className="pens">({pensVal})</span>
               )}
             </>
@@ -153,26 +155,63 @@ function ThirdPlaceCard({ m, st, teams }) {
   const codeA = teams?.[0];
   const codeB = teams?.[1];
 
-  const scoreA = st && st.sa !== null ? st.sa : null;
-  const scoreB = st && st.sb !== null ? st.sb : null;
+  const live = st && (st.status === 'live' || st.status === 'ht');
+  const isFt = st && st.status === 'ft' && st.winner;
+
+  const renderRow = (code, side) => {
+    const isWinner = isFt && st.winner === code;
+    const isLoser = isFt && st.winner !== code;
+    const nameCls = code ? 'ko-name' : 'ko-name placeholder';
+    const rowCls = `ko-row ${isWinner ? 'winner' : ''} ${isLoser ? 'loser' : ''}`;
+
+    const scoreVal = st && st.sa !== null ? (side === 0 ? st.sa : st.sb) : null;
+    const pensVal = st && st.pensA !== null ? (side === 0 ? st.pensA : st.pensB) : null;
+    const hasPens = st && st.pensA !== null && (st.pensA > 0 || st.pensB > 0);
+
+    return (
+      <div className={rowCls} data-side={side}>
+        {code ? (
+          <img className="flagchip" src={D.flag(code)} alt="" />
+        ) : (
+          <span className="seal" />
+        )}
+        <span className={nameCls}>
+          {code ? D.TEAMS[code].name : D.srcLabel(m.src[side])}
+        </span>
+        <span className="ko-score">
+          {scoreVal !== null ? (
+            <>
+              <ScoreDisplay value={scoreVal} />
+              {hasPens && pensVal !== null && (
+                <span className="pens">({pensVal})</span>
+              )}
+            </>
+          ) : (
+            ''
+          )}
+        </span>
+      </div>
+    );
+  };
 
   return (
-    <div className="third-card" id={m.id}>
-      <div className="tp-head">THIRD PLACE · M103 · 19 JUL</div>
-      <div className="tp-row">
-        <span className={codeA ? 'tp-name' : 'tp-name placeholder'} data-side="0">
-          {codeA ? D.TEAMS[codeA].name : D.srcLabel(m.src[0])}
-        </span>
-        <span className="tp-score" data-side="0">
-          {scoreA !== null ? <ScoreDisplay value={scoreA} /> : ''}
-        </span>
-        <span className="tp-v">V</span>
-        <span className="tp-score" data-side="1">
-          {scoreB !== null ? <ScoreDisplay value={scoreB} /> : ''}
-        </span>
-        <span className={codeB ? 'tp-name' : 'tp-name placeholder'} data-side="1">
-          {codeB ? D.TEAMS[codeB].name : D.srcLabel(m.src[1])}
-        </span>
+    <div className={`third-card-v2 ${live ? 'is-live' : ''}`} id={m.id}>
+      <div className="third-head">
+        <div className="t-title">THIRD PLACE</div>
+        {live ? (
+          <div className="t-sub">
+            <span className="live-tag">● LIVE {st.status === 'ht' ? 'HT' : `${st.minute}′`}</span>
+          </div>
+        ) : (
+          <div className="t-sub" id="third-sub">
+            M103 · 19 JUL · MIAMI
+          </div>
+        )}
+      </div>
+      <div className="third-body">
+        {renderRow(codeA, 0)}
+        <div className="third-vs">VS</div>
+        {renderRow(codeB, 1)}
       </div>
     </div>
   );

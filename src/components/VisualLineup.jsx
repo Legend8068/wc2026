@@ -56,11 +56,11 @@ function plotByGrid(xi, side) {
     let frac = maxR === minR ? 0 : (r - minR) / (maxR - minR); // 0 = defence … 1 = attack
     if (outRows.length === 4) {
       const idx = outRows.indexOf(r);
-      if (idx === 1) frac = 0.20;
-      else if (idx === 2) frac = 0.70;
+      if (idx === 1) frac = 0.33;
+      else if (idx === 2) frac = 0.66;
     } else if (outRows.length === 3) {
       const idx = outRows.indexOf(r);
-      if (idx === 1) frac = 0.45;
+      if (idx === 1) frac = 0.50;
     }
     const y = bands.def + frac * (bands.fwd - bands.def);
     spreadRow(group, y, side, plotted);
@@ -84,10 +84,10 @@ function plotByFormation(xi, formation, side) {
   lines.forEach((count, li) => {
     let t = nLines === 1 ? 0 : li / (nLines - 1);
     if (nLines === 4) {
-      if (li === 1) t = 0.20;
-      else if (li === 2) t = 0.70;
+      if (li === 1) t = 0.33;
+      else if (li === 2) t = 0.66;
     } else if (nLines === 3) {
-      if (li === 1) t = 0.45;
+      if (li === 1) t = 0.50;
     }
     const y = bands.def + t * (bands.fwd - bands.def);
     spreadRow(outfield.slice(idx, idx + count), y, side, plotted);
