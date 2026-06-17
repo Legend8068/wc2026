@@ -163,6 +163,119 @@ function useColumnCount(ref, minCol = 330, gap = 24) {
   return cols;
 }
 
+function TiebreakerRules() {
+  const groupRules = [
+    "Points in head-to-head matches",
+    "Goal difference in head-to-head matches",
+    "Goals scored in head-to-head matches",
+    "Overall goal difference",
+    "Overall goals scored",
+    "Team conduct score (cards)",
+    "FIFA World Ranking"
+  ];
+  const thirdRules = [
+    "Overall points",
+    "Overall goal difference",
+    "Overall goals scored",
+    "Team conduct score (cards)",
+    "FIFA World Ranking"
+  ];
+
+  return (
+    <article className="rules-card" aria-labelledby="rules-heading">
+      <div className="g-head">
+        <div className="g-tag" style={{ background: 'var(--red)', color: 'white' }}>RULES</div>
+        <div className="g-sub" id="rules-heading">TIEBREAKER CRITERIA</div>
+      </div>
+      <div className="rules-body">
+        <div className="rules-section">
+          <h4>Group Stage Tiebreakers</h4>
+          <div className="rules-list">
+            {groupRules.map((rule, i) => (
+              <div className="rule-item" key={i}>
+                <span className="rule-num">{String(i + 1).padStart(2, '0')}</span>
+                <span className="rule-text">{rule}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <div className="rules-section">
+          <h4>3rd Place Teams Ranking</h4>
+          <div className="rules-list">
+            {thirdRules.map((rule, i) => (
+              <div className="rule-item" key={i}>
+                <span className="rule-num">{String(i + 1).padStart(2, '0')}</span>
+                <span className="rule-text">{rule}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function GroupCard({ g, rows, groupOrder, fixtures, states, gc }) {
+  const [expanded, setExpanded] = useState(false);
+  const [hoveredTeam, setHoveredTeam] = useState(null);
+
+  return (
+    <article 
+      className={`group-card gc-${gc}`} 
+      id={`group-${g}`} 
+      key={g}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => {
+        setExpanded(false);
+        setHoveredTeam(null);
+      }}
+    >
+      <div className="g-head">
+        <div className="g-tag">GROUP {g}</div>
+        <div className="g-sub">STANDINGS</div>
+      </div>
+      <div className="g-body">
+        <div className="st-grid-head">
+          <div className="team-col">TEAM</div>
+          <div>P</div>
+          <div>W</div>
+          <div>D</div>
+          <div>L</div>
+          <div>GD</div>
+          <div>PTS</div>
+        </div>
+        <div className="st-rows">
+          {rows.map(r => (
+            <GroupRow
+              key={r.code}
+              r={r}
+              groupOrder={groupOrder}
+              onMouseEnter={() => setHoveredTeam(r.code)}
+              onMouseLeave={() => setHoveredTeam(null)}
+            />
+          ))}
+        </div>
+        <div className={`fx-accordion ${expanded ? 'is-expanded' : ''}`}>
+          <button className="fx-label" onClick={() => setExpanded(!expanded)} type="button">
+            FIXTURES &nbsp;<span>· SGT</span>
+            <svg viewBox="0 0 24 24" className="chevron" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div className="fx-accordion-content">
+            <div className="fx-accordion-inner">
+              {fixtures.map(fx => (
+                <GroupFixtureRow key={fx.id} fx={fx} st={states[fx.id]} hoveredTeam={hoveredTeam} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export default function Groups({ snapshot }) {
   const gridRef = useRef(null);
   const colCount = useColumnCount(gridRef);
@@ -172,60 +285,41 @@ export default function Groups({ snapshot }) {
   const { standings, states, thirdStandings } = snapshot;
   const groupKeys = Object.keys(D.GROUPS);
 
-  const renderGroupCard = (g) => {
-    const rows = standings[g] || [];
-    const groupOrder = rows.map(r => r.code).join(',');
-    const fixtures = D.GROUP_FIXTURES.filter(f => f.group === g);
-    const gc = groupKeys.indexOf(g) % 3; // 0 green · 1 red · 2 blue (matches original cycle)
-
-    return (
-      <article className={`group-card gc-${gc}`} id={`group-${g}`} key={g}>
-        <div className="g-head">
-          <div className="g-tag">GROUP {g}</div>
-          <div className="g-sub">STANDINGS</div>
-        </div>
-        <div className="g-body">
-          <div className="st-grid-head">
-            <div className="team-col">TEAM</div>
-            <div>P</div>
-            <div>W</div>
-            <div>D</div>
-            <div>L</div>
-            <div>GD</div>
-            <div>PTS</div>
-          </div>
-          <div className="st-rows">
-            {rows.map(r => (
-              <GroupRow
-                key={r.code}
-                r={r}
-                groupOrder={groupOrder}
-              />
-            ))}
-          </div>
-          <details className="fx-dropdown">
-            <summary className="fx-label">FIXTURES &nbsp;<span>· SGT</span></summary>
-            {fixtures.map(fx => (
-              <GroupFixtureRow key={fx.id} fx={fx} st={states[fx.id]} />
-            ))}
-          </details>
-        </div>
-      </article>
-    );
-  };
-
   return (
     <section id="groups">
       <div className="big-head">
         <BrandText text="THE 48 · GROUP STAGE" className="section-brand-header" />
         <div className="rule" />
       </div>
-      <ThirdPlaceTable rows={thirdStandings} />
+      <div className="thirds-and-rules-row">
+        <div className="thirds-wrapper">
+          <ThirdPlaceTable rows={thirdStandings} />
+        </div>
+        <div className="rules-wrapper">
+          <TiebreakerRules />
+        </div>
+      </div>
       <div className="groups-grid" id="groups-grid" ref={gridRef}>
         {Array.from({ length: colCount }, (_, c) => (
           <div className="groups-col" key={c}>
             {/* round-robin keeps row-major reading order: A,B,C across the top row */}
-            {groupKeys.filter((_, i) => i % colCount === c).map(renderGroupCard)}
+            {groupKeys.filter((_, i) => i % colCount === c).map(g => {
+              const rows = standings[g] || [];
+              const groupOrder = rows.map(r => r.code).join(',');
+              const fixtures = D.GROUP_FIXTURES.filter(f => f.group === g);
+              const gc = groupKeys.indexOf(g) % 3;
+              return (
+                <GroupCard 
+                  key={g} 
+                  g={g} 
+                  rows={rows} 
+                  groupOrder={groupOrder} 
+                  fixtures={fixtures} 
+                  states={states} 
+                  gc={gc} 
+                />
+              );
+            })}
           </div>
         ))}
       </div>
