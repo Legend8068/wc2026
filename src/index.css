@@ -407,8 +407,8 @@ a {
   height: clamp(280px, 35vw, 450px);
   position: relative;
   z-index: 2;
-  /* Add an outer glow to the entire mesh */
-  filter: drop-shadow(0 0 25px rgba(0, 243, 255, 0.4));
+  /* Outer glow in the site palette — blue core warmed by gold */
+  filter: drop-shadow(0 0 16px rgba(51, 102, 255, 0.45)) drop-shadow(0 0 34px rgba(245, 197, 66, 0.18));
 }
 
 .ball-glow-bg {
@@ -419,7 +419,7 @@ a {
   width: clamp(200px, 25vw, 350px);
   height: clamp(200px, 25vw, 350px);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 243, 255, 0.15) 0%, rgba(51, 102, 255, 0.05) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(245, 197, 66, 0.16) 0%, rgba(51, 102, 255, 0.08) 45%, transparent 72%);
   filter: blur(20px);
   z-index: 1;
   pointer-events: none;
@@ -772,12 +772,12 @@ section {
 }
 
 .live-card:not(.is-expanded) {
-  height: 210px;
+  height: 226px;
 }
 
 @media (min-width: 640px) {
   .live-card:not(.is-expanded) {
-    height: 230px;
+    height: 246px;
   }
 }
 
@@ -1132,8 +1132,59 @@ section {
   z-index: 4;
 }
 
+.lcv-venue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  line-height: 1.15;
+  padding: 6px 8px 0;
+  flex-shrink: 0;
+}
+
+.lcv-venue-city {
+  font-family: var(--head);
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--white);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lcv-venue-stadium {
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted-warm);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .lcv-venue {
+    padding-top: 8px;
+  }
+
+  .lcv-venue-city {
+    font-size: 12px;
+  }
+
+  .lcv-venue-stadium {
+    font-size: 10.5px;
+  }
+}
+
 .lcv-score-box {
   flex: 1;
+  min-height: 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1144,7 +1195,7 @@ section {
   font-weight: 700;
   letter-spacing: 0.02em;
   gap: 8px;
-  padding: 10px;
+  padding: 6px 10px;
 }
 
 @media (min-width: 640px) {
@@ -1232,13 +1283,13 @@ section {
 }
 
 .live-card.is-live:not(.is-expanded) {
-  height: 250px;
+  height: 264px;
   animation: live-pulse 2.2s ease-in-out infinite;
 }
 
 @media (min-width: 640px) {
   .live-card.is-live:not(.is-expanded) {
-    height: 282px;
+    height: 296px;
   }
 
   .live-card.is-live .lcv-score-box {

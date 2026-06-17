@@ -54,22 +54,48 @@ function generateEdges(vertices) {
 
 const EDGES = generateEdges(VERTICES);
 
+// Paint the mesh in the host-nation palette: three longitudinal sectors of
+// red / green / blue (Canada · Mexico · USA) so the ball reads as ours at a
+// glance, with gold reserved for the highlight glow.
+const HOST_COLORS = ['#e2001a', '#00c853', '#3366ff'];
+const VERTEX_COLORS = VERTICES.map((v) => {
+  const lon = Math.atan2(v[2], v[0]); // -PI..PI around the vertical axis
+  const sector = Math.floor(((lon + Math.PI) / (2 * Math.PI)) * 3) % 3;
+  return HOST_COLORS[sector];
+});
+// Each edge takes the colour of one endpoint — a faint nation-tinted wireframe.
+const EDGE_COLORS = EDGES.map((e) => VERTEX_COLORS[e[0]]);
+
 export default function InteractiveBall() {
   const svgRef = useRef(null);
-  
+
   // Arrays of refs to hold the actual DOM elements for lightning-fast direct mutation
   const edgesRef = useRef([]);
   const nodesRef = useRef([]);
   const glowsRef = useRef([]);
-  
-  const targetRotation = useRef({ x: 0, y: 0 });
-  const currentRotation = useRef({ x: 0, y: 0 });
-  const mousePos = useRef({ x: 0, y: 0 });
+
+  // Pointer state: normalised position (−1..1) and whether we're hovering.
+  const mousePos = useRef({ x: 0, y: 0, active: false });
+  const prevMouse = useRef({ x: 0, y: 0, has: false });
+  // Flick impulses accumulated between frames (consumed by the loop).
+  const impulse = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     let animationFrameId;
-    let baseRx = 0;
-    let baseRy = 0;
+    let last = performance.now();
+
+    // Physics state: orientation + angular velocity (rad · s⁻¹).
+    const rot = { x: 0, y: 0 };
+    const angVel = { x: 0, y: 0 };
+
+    // Idle drift so the ball is always gently turning; friction pulls any
+    // spin back down to it. Reduced-motion users get a near-still ball.
+    const idle = reduced ? { x: 0.0, y: 0.04 } : { x: 0.05, y: 0.18 };
+    const FRICTION_BASE = 0.06; // per-second decay factor (lower = more drag)
+    const HOLD_TORQUE = reduced ? 0 : 2.4; // pull toward an off-centre pointer
+    const MAX_SPIN = 9; // clamp so a fast flick can't go wild
 
     const rotate3D = (point, rx, ry) => {
       let [x, y, z] = point;
@@ -77,7 +103,7 @@ export default function InteractiveBall() {
       const sinX = Math.sin(rx);
       let y1 = y * cosX - z * sinX;
       let z1 = y * sinX + z * cosX;
-      
+
       const cosY = Math.cos(ry);
       const sinY = Math.sin(ry);
       let x2 = x * cosY + z1 * sinY;
@@ -85,18 +111,36 @@ export default function InteractiveBall() {
       return [x2, y1, z2];
     };
 
-    const animate = () => {
-      baseRy += 0.003;
-      baseRx += 0.0015;
+    const animate = (now) => {
+      let dt = (now - last) / 1000;
+      last = now;
+      if (dt > 0.05) dt = 0.05; // clamp big gaps (tab was backgrounded)
 
-      targetRotation.current.y = baseRy + mousePos.current.x * 0.8;
-      targetRotation.current.x = baseRx - mousePos.current.y * 0.8;
+      // 1 · flick impulses (mouse velocity) → instant change in angular vel.
+      angVel.y += impulse.current.x;
+      angVel.x += impulse.current.y;
+      impulse.current.x = 0;
+      impulse.current.y = 0;
 
-      currentRotation.current.x += (targetRotation.current.x - currentRotation.current.x) * 0.08;
-      currentRotation.current.y += (targetRotation.current.y - currentRotation.current.y) * 0.08;
+      // 2 · holding the pointer off-centre keeps nudging the ball round.
+      if (mousePos.current.active && HOLD_TORQUE) {
+        angVel.y += mousePos.current.x * HOLD_TORQUE * dt;
+        angVel.x -= mousePos.current.y * HOLD_TORQUE * dt;
+      }
+
+      // 3 · friction (frame-rate independent) bleeds spin away.
+      const damp = Math.pow(FRICTION_BASE, dt);
+      angVel.x *= damp;
+      angVel.y *= damp;
+      angVel.x = Math.max(-MAX_SPIN, Math.min(MAX_SPIN, angVel.x));
+      angVel.y = Math.max(-MAX_SPIN, Math.min(MAX_SPIN, angVel.y));
+
+      // 4 · integrate: idle drift + carried momentum.
+      rot.x += (idle.x + angVel.x) * dt;
+      rot.y += (idle.y + angVel.y) * dt;
 
       const projectedVertices = VERTICES.map(v => {
-        const rotated = rotate3D(v, currentRotation.current.x, currentRotation.current.y);
+        const rotated = rotate3D(v, rot.x, rot.y);
         const perspective = 20;
         const scale = perspective / (perspective + rotated[2]);
         return {
@@ -113,8 +157,8 @@ export default function InteractiveBall() {
         if (!line) continue;
         const v1 = projectedVertices[EDGES[i][0]];
         const v2 = projectedVertices[EDGES[i][1]];
-        const opacity = Math.max(0.05, ((v1.z + v2.z) / 2 + 6) / 12) * 0.6;
-        
+        const opacity = Math.max(0.05, ((v1.z + v2.z) / 2 + 6) / 12) * 0.55;
+
         line.setAttribute('x1', v1.x.toFixed(3));
         line.setAttribute('y1', v1.y.toFixed(3));
         line.setAttribute('x2', v2.x.toFixed(3));
@@ -127,14 +171,16 @@ export default function InteractiveBall() {
         const node = nodesRef.current[i];
         const glow = glowsRef.current[i];
         if (!node || !glow) continue;
-        
+
         const pv = projectedVertices[i];
-        const opacity = Math.max(0.1, (pv.z + 6) / 12);
+        // Front-facing nodes pop brighter; back ones recede.
+        const depth = (pv.z + 6) / 12; // 0 (far) .. 1 (near)
+        const opacity = Math.max(0.12, depth);
         const r = 0.15 * pv.scale;
 
         const xStr = pv.x.toFixed(3);
         const yStr = pv.y.toFixed(3);
-        
+
         node.setAttribute('cx', xStr);
         node.setAttribute('cy', yStr);
         node.setAttribute('r', r.toFixed(3));
@@ -142,14 +188,14 @@ export default function InteractiveBall() {
 
         glow.setAttribute('cx', xStr);
         glow.setAttribute('cy', yStr);
-        glow.setAttribute('r', (r * 3).toFixed(3));
-        glow.setAttribute('opacity', (opacity * 0.25).toFixed(3));
+        glow.setAttribute('r', (r * 3.2).toFixed(3));
+        glow.setAttribute('opacity', (depth * depth * 0.4).toFixed(3));
       }
 
       animationFrameId = requestAnimationFrame(animate);
     };
 
-    animate();
+    animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
@@ -158,7 +204,15 @@ export default function InteractiveBall() {
     const rect = svgRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
-    mousePos.current = { x, y };
+
+    // Pointer velocity → flick impulse (gives the spin real momentum).
+    if (prevMouse.current.has) {
+      const FLICK = 7;
+      impulse.current.x += (x - prevMouse.current.x) * FLICK;
+      impulse.current.y -= (y - prevMouse.current.y) * FLICK;
+    }
+    prevMouse.current = { x, y, has: true };
+    mousePos.current = { x, y, active: true };
   };
 
   const handleMouseEnter = () => {
@@ -166,13 +220,14 @@ export default function InteractiveBall() {
   };
 
   const handleMouseLeave = () => {
-    mousePos.current = { x: 0, y: 0 };
+    mousePos.current = { x: 0, y: 0, active: false };
+    prevMouse.current = { x: 0, y: 0, has: false };
   };
 
   return (
-    <div 
-      className="interactive-ball-wrapper" 
-      onMouseMove={handleMouseMove} 
+    <div
+      className="interactive-ball-wrapper"
+      onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onMouseEnter={handleMouseEnter}
     >
@@ -180,33 +235,34 @@ export default function InteractiveBall() {
       <svg ref={svgRef} viewBox="-7 -7 14 14" className="interactive-ball-svg">
         <g className="ball-edges">
           {EDGES.map((_, i) => (
-            <line 
+            <line
               key={i}
               ref={el => edgesRef.current[i] = el}
-              stroke="#00f3ff" 
-              strokeWidth="0.04" 
+              stroke={EDGE_COLORS[i]}
+              strokeWidth="0.045"
+              strokeLinecap="round"
             />
           ))}
         </g>
 
         {/* Render Fake Glows behind nodes */}
         <g className="ball-glows">
-          {VERTICES.map((v, i) => (
-            <circle 
+          {VERTICES.map((_, i) => (
+            <circle
               key={`glow-${i}`}
               ref={el => glowsRef.current[i] = el}
-              fill={v[1] > 0 ? "var(--cyan, #00f3ff)" : "var(--blue, #3366ff)"}
+              fill={VERTEX_COLORS[i]}
             />
           ))}
         </g>
 
         {/* Render Core Nodes */}
         <g className="ball-nodes">
-          {VERTICES.map((v, i) => (
-            <circle 
+          {VERTICES.map((_, i) => (
+            <circle
               key={`node-${i}`}
               ref={el => nodesRef.current[i] = el}
-              fill={v[1] > 0 ? "var(--cyan, #00f3ff)" : "var(--blue, #3366ff)"}
+              fill={VERTEX_COLORS[i]}
             />
           ))}
         </g>

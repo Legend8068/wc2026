@@ -17,6 +17,89 @@ const hash = (str) => {
   return h >>> 0;
 };
 
+/* ---------- host venues (city + stadium), keyed in lockstep with HostMap ---------- */
+const VENUE_LIST = [
+  { stadium: 'Mercedes-Benz Stadium', city: 'Atlanta' },
+  { stadium: 'Gillette Stadium', city: 'Boston' },
+  { stadium: 'AT&T Stadium', city: 'Dallas' },
+  { stadium: 'NRG Stadium', city: 'Houston' },
+  { stadium: 'Arrowhead Stadium', city: 'Kansas City' },
+  { stadium: 'SoFi Stadium', city: 'Los Angeles' },
+  { stadium: 'Hard Rock Stadium', city: 'Miami' },
+  { stadium: 'MetLife Stadium', city: 'New York / New Jersey' },
+  { stadium: 'Lincoln Financial Field', city: 'Philadelphia' },
+  { stadium: "Levi's Stadium", city: 'San Francisco Bay Area' },
+  { stadium: 'Lumen Field', city: 'Seattle' },
+  { stadium: 'BMO Field', city: 'Toronto' },
+  { stadium: 'BC Place', city: 'Vancouver' },
+  { stadium: 'Estadio Azteca', city: 'Mexico City' },
+  { stadium: 'Estadio Akron', city: 'Guadalajara' },
+  { stadium: 'Estadio BBVA', city: 'Monterrey' }
+];
+
+const venueByStadium = (stadium) => VENUE_LIST.find((v) => v.stadium === stadium);
+
+// Short keys → the canonical stadium names in VENUE_LIST (city is derived from
+// there, so card headers and the host-map pulse always agree).
+const V = {
+  ATL: 'Mercedes-Benz Stadium', BOS: 'Gillette Stadium', DAL: 'AT&T Stadium',
+  HOU: 'NRG Stadium', KC: 'Arrowhead Stadium', LA: 'SoFi Stadium',
+  MIA: 'Hard Rock Stadium', NYNJ: 'MetLife Stadium', PHI: 'Lincoln Financial Field',
+  SF: "Levi's Stadium", SEA: 'Lumen Field', TOR: 'BMO Field', VAN: 'BC Place',
+  MEX: 'Estadio Azteca', GDL: 'Estadio Akron', MTY: 'Estadio BBVA'
+};
+
+// The real FIFA World Cup 2026 venue for every match. Group fixtures (A1–L6)
+// are mapped by their actual matchup; knockout matches (M73–M104) by FIFA's
+// official match number, which this site's KO ids mirror exactly. Source:
+// the official 2026 match schedule.
+const MATCH_VENUE = {
+  // Group A
+  A1: V.MEX, A2: V.GDL, A3: V.ATL, A4: V.GDL, A5: V.MEX, A6: V.MTY,
+  // Group B
+  B1: V.TOR, B2: V.SF, B3: V.LA, B4: V.VAN, B5: V.VAN, B6: V.SEA,
+  // Group C
+  C1: V.NYNJ, C2: V.BOS, C3: V.BOS, C4: V.PHI, C5: V.MIA, C6: V.ATL,
+  // Group D
+  D1: V.LA, D2: V.VAN, D3: V.SEA, D4: V.SF, D5: V.LA, D6: V.SF,
+  // Group E
+  E1: V.HOU, E2: V.PHI, E3: V.TOR, E4: V.KC, E5: V.PHI, E6: V.NYNJ,
+  // Group F
+  F1: V.DAL, F2: V.MTY, F3: V.HOU, F4: V.MTY, F5: V.DAL, F6: V.KC,
+  // Group G
+  G1: V.SEA, G2: V.LA, G3: V.LA, G4: V.VAN, G5: V.VAN, G6: V.SEA,
+  // Group H
+  H1: V.ATL, H2: V.MIA, H3: V.ATL, H4: V.MIA, H5: V.GDL, H6: V.HOU,
+  // Group I
+  I1: V.NYNJ, I2: V.BOS, I3: V.PHI, I4: V.NYNJ, I5: V.BOS, I6: V.TOR,
+  // Group J
+  J1: V.KC, J2: V.SF, J3: V.DAL, J4: V.SF, J5: V.DAL, J6: V.KC,
+  // Group K
+  K1: V.HOU, K2: V.MEX, K3: V.HOU, K4: V.GDL, K5: V.MIA, K6: V.ATL,
+  // Group L
+  L1: V.DAL, L2: V.TOR, L3: V.BOS, L4: V.TOR, L5: V.NYNJ, L6: V.PHI,
+  // Round of 32
+  M73: V.LA, M74: V.BOS, M75: V.MTY, M76: V.HOU, M77: V.NYNJ, M78: V.DAL,
+  M79: V.MEX, M80: V.ATL, M81: V.SF, M82: V.SEA, M83: V.TOR, M84: V.LA,
+  M85: V.VAN, M86: V.MIA, M87: V.KC, M88: V.DAL,
+  // Round of 16
+  M89: V.PHI, M90: V.HOU, M91: V.NYNJ, M92: V.MEX, M93: V.DAL, M94: V.SEA,
+  M95: V.ATL, M96: V.VAN,
+  // Quarter-finals
+  M97: V.BOS, M98: V.LA, M99: V.MIA, M100: V.KC,
+  // Semi-finals · third place · final
+  M101: V.DAL, M102: V.ATL, M103: V.MIA, M104: V.NYNJ
+};
+
+// Stadium+city for any match id. Same value `simulate()` stamps onto its
+// `venue` field, so a card's header, its stats drawer, the live ticker and the
+// host-map pulse all name the same real venue. Falls back to a deterministic
+// pick only if an id is somehow unmapped.
+export function venueFor(matchId) {
+  const stadium = MATCH_VENUE[matchId];
+  return (stadium && venueByStadium(stadium)) || VENUE_LIST[hash(`${matchId}:venue`) % VENUE_LIST.length];
+}
+
 const norm = (s) => s.toLowerCase().normalize('NFD')
   .replace(/-/g, ' ')
   .replace(/[̀-ͯ]/g, '').replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
@@ -397,13 +480,7 @@ function simulate(matchId, a, b, kickoff, knockout, now) {
     return minX - minY;
   });
 
-  const venueList = [
-    'Mercedes-Benz Stadium', 'Gillette Stadium', 'AT&T Stadium', 'NRG Stadium',
-    'Arrowhead Stadium', 'SoFi Stadium', 'Hard Rock Stadium', 'MetLife Stadium',
-    'Lincoln Financial Field', "Levi's Stadium", 'Lumen Field', 'BMO Field',
-    'BC Place', 'Estadio Azteca', 'Estadio Akron', 'Estadio BBVA'
-  ];
-  const assignedVenue = venueList[hash(`${matchId}:venue`) % venueList.length];
+  const assignedVenue = venueFor(matchId).stadium;
 
   const out = {
     status: ph.status,

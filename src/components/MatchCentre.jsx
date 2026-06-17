@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import D from '../data';
-import { lineups, applySimBadges } from '../engine';
+import { lineups, applySimBadges, venueFor } from '../engine';
 import { fetchLineup } from '../live';
 import RevealSection from './RevealSection';
 import BrandText from './BrandText';
@@ -240,6 +240,8 @@ export default function MatchCentre({ snapshot }) {
     const teamB = D.TEAMS[fx.b];
     if (!teamA || !teamB) return null;
 
+    const venue = venueFor(fx.id);
+
     // Prefer the real ESPN line-up (lazily fetched on expand, already badged);
     // until it arrives — or for sim/unmapped matches — show the deterministic
     // simulated line-up so there's always something to render.
@@ -268,6 +270,10 @@ export default function MatchCentre({ snapshot }) {
           </div>
 
           <div className="lcv-center">
+            <div className="lcv-venue" title={`${venue.stadium}, ${venue.city}`}>
+              <span className="lcv-venue-city">{venue.city}</span>
+              <span className="lcv-venue-stadium">{venue.stadium}</span>
+            </div>
             <div className="lcv-score-box">
               {st.sa === null ? (
                 <span className="lcv-vs">VS</span>
