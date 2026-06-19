@@ -730,7 +730,7 @@ const TEAM_CATEGORIES = [
 /* ═══════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════ */
-export default function Statistics({ snapshot }) {
+const Statistics = React.memo(function Statistics({ snapshot }) {
   const [tab, setTab] = useState('players');
   const [teamCat, setTeamCat] = useState('attack');
   const stats = useMemo(() => computeTournamentStats(snapshot), [snapshot]);
@@ -991,4 +991,6 @@ export default function Statistics({ snapshot }) {
       )}
     </RevealSection>
   );
-}
+});
+
+export default Statistics;

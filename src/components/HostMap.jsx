@@ -80,7 +80,7 @@ function Marker({ v, active, isLive, onEnter, onLeave }) {
   );
 }
 
-export default function HostMap({ snapshot }) {
+const HostMap = React.memo(function HostMap({ snapshot }) {
   const [active, setActive] = useState(null);
   const [hoverCC, setHoverCC] = useState(null);
   const enter = useCallback((id) => () => setActive(id), []);
@@ -168,4 +168,6 @@ export default function HostMap({ snapshot }) {
       </div>
     </RevealSection>
   );
-}
+});
+
+export default HostMap;

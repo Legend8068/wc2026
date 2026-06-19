@@ -2216,9 +2216,16 @@ section {
 }
 
 .rule-item:hover {
-  background: rgba(245, 197, 66, 0.14);
   transform: translateX(4px);
 }
+
+.rule-item:nth-child(1):hover { background: rgba(245, 197, 66, 0.15); }
+.rule-item:nth-child(2):hover { background: rgba(226, 0, 26, 0.12); }
+.rule-item:nth-child(3):hover { background: rgba(51, 102, 255, 0.12); }
+.rule-item:nth-child(4):hover { background: rgba(0, 200, 83, 0.12); }
+.rule-item:nth-child(5):hover { background: rgba(156, 39, 176, 0.12); }
+.rule-item:nth-child(6):hover { background: rgba(255, 152, 0, 0.15); }
+.rule-item:nth-child(7):hover { background: rgba(0, 188, 212, 0.15); }
 
 .rule-num {
   font-family: var(--head);
@@ -2301,11 +2308,25 @@ section {
   padding: 8px 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 8px;
-  transition: background 0.4s ease;
+  transition: background 0.3s ease, box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.thirds-row:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  background: rgba(245, 197, 66, 0.08);
 }
 
 .thirds-row.qualified {
   background: rgba(245, 197, 66, 0.14);
+}
+
+.thirds-row.moved {
+  animation: row-glow 1s ease;
+}
+
+.thirds-row.qualified:hover {
+  background: rgba(245, 197, 66, 0.25);
 }
 
 .thirds-row.qualified .st-team span {
@@ -2434,7 +2455,7 @@ section {
   padding: 8px 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 8px;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
   cursor: default;
 }
 
@@ -2649,6 +2670,40 @@ section {
   background: rgba(245, 197, 66, 0.14);
   transform: translateX(4px);
   box-shadow: -3px 0 0 var(--gold);
+}
+
+.st-row.highlight,
+.thirds-row.highlight {
+  background: rgba(245, 197, 66, 0.14) !important;
+  box-shadow: -3px 0 0 var(--gold) !important;
+}
+
+/* Group-specific highlights matching each group card's color theme */
+.group-card.gc-0 .st-row.highlight {
+  background: rgba(0, 200, 83, 0.14) !important;
+  box-shadow: -3px 0 0 var(--green) !important;
+}
+.group-card.gc-0 .fx-row.highlight {
+  background: rgba(0, 200, 83, 0.14) !important;
+  box-shadow: -3px 0 0 var(--green) !important;
+}
+
+.group-card.gc-1 .st-row.highlight {
+  background: rgba(226, 0, 26, 0.14) !important;
+  box-shadow: -3px 0 0 var(--red) !important;
+}
+.group-card.gc-1 .fx-row.highlight {
+  background: rgba(226, 0, 26, 0.14) !important;
+  box-shadow: -3px 0 0 var(--red) !important;
+}
+
+.group-card.gc-2 .st-row.highlight {
+  background: rgba(51, 102, 255, 0.14) !important;
+  box-shadow: -3px 0 0 var(--blue) !important;
+}
+.group-card.gc-2 .fx-row.highlight {
+  background: rgba(51, 102, 255, 0.14) !important;
+  box-shadow: -3px 0 0 var(--blue) !important;
 }
 
 .fx-row.dim {

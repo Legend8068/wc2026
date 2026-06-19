@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import D from './data';
 import * as engine from './engine';
 import * as live from './live';
@@ -65,8 +65,14 @@ function triggerConfetti() {
 
 export default function App() {
   const [mode, setMode] = useState('live');
-  const [liveStates, setLiveStates] = useState(null);
-  const [feedOk, setFeedOk] = useState(false);
+  const [liveStates, setLiveStates] = useState(() => {
+    try {
+      const cached = localStorage.getItem('wc2026_live_cache');
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    return null;
+  });
+  const [feedOk, setFeedOk] = useState(() => !!localStorage.getItem('wc2026_live_cache'));
   const [demoTime, setDemoTime] = useState(null);
   const [demoPlaying, setDemoPlaying] = useState(true);
   const [now, setNow] = useState(Date.now());
@@ -88,6 +94,9 @@ export default function App() {
         setLiveStates(states);
         setFeedOk(true);
         currentStates = states;
+        try {
+          localStorage.setItem('wc2026_live_cache', JSON.stringify(states));
+        } catch (e) {}
       } catch (err) {
         setLiveStates(null);
         setFeedOk(false);
@@ -96,7 +105,7 @@ export default function App() {
       // Determine next poll interval
       const nowTime = Date.now();
       const isLive = isAnyMatchLiveOrSoon(nowTime, currentStates);
-      const intervalMs = isLive ? 60000 : 3600000; // 60s if live or soon, 1 hour if not
+      const intervalMs = isLive ? 30000 : 3600000; // 30s if live or soon, 1 hour if not
 
       timeoutId = setTimeout(poll, intervalMs);
     };
@@ -162,7 +171,10 @@ export default function App() {
 
   // Compute snapshot based on virtual time 'now'
   const useLive = mode === 'live' && feedOk && liveStates;
-  const snapshot = engine.snapshot(now, useLive ? 'live' : 'sim', liveStates);
+  
+  const snapshot = useMemo(() => {
+    return engine.snapshot(now, useLive ? 'live' : 'sim', liveStates);
+  }, [useLive ? liveStates : now, useLive, mode]);
 
   // Confetti trigger trigger
   useEffect(() => {

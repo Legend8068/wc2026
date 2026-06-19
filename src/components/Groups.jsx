@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, LayoutGroup } from 'framer-motion';
 import D from '../data';
 import BrandText from './BrandText';
 
@@ -24,7 +25,24 @@ function formatGD(value) {
   return String(value);
 }
 
-function GroupRow({ r, groupOrder }) {
+const TableCell = React.memo(({ value, className }) => {
+  const [pop, setPop] = useState(false);
+  const prevVal = useRef(value);
+
+  useEffect(() => {
+    if (value !== prevVal.current && value !== null && prevVal.current !== null && value !== '') {
+      setPop(true);
+      const t = setTimeout(() => setPop(false), 700);
+      prevVal.current = value;
+      return () => clearTimeout(t);
+    }
+    prevVal.current = value;
+  }, [value]);
+
+  return <div className={`st-cell ${className || ''} ${pop ? 'pop' : ''}`}>{value !== null ? value : ''}</div>;
+});
+
+const GroupRow = React.memo(({ r, groupOrder, hoveredTeam, onMouseEnter, onMouseLeave }) => {
   const [moved, setMoved] = useState(false);
   const prevOrder = useRef(groupOrder);
 
@@ -40,27 +58,103 @@ function GroupRow({ r, groupOrder }) {
 
   const filled = r.p > 0;
   const isQualified = Boolean(r.qualified);
+  const isHighlighted = r.code === hoveredTeam;
 
   return (
-    <div
-      className={`st-row ${isQualified ? 'qualified' : ''} ${moved ? 'moved' : ''}`}
+    <motion.div
+      layout
+      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
       data-code={r.code}
     >
-      <div className="st-team">
-        <img src={D.flag(r.code)} alt="" loading="lazy" />
-        <span>{D.TEAMS[r.code].name}</span>
+      <div
+        className={`st-row ${isQualified ? 'qualified' : ''} ${moved ? 'moved' : ''} ${isHighlighted ? 'highlight' : ''}`}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
+        <div className="st-team">
+          <img src={D.flag(r.code)} alt="" loading="lazy" />
+          <span>{D.TEAMS[r.code].name}</span>
+        </div>
+        <TableCell value={filled ? r.p : ''} />
+        <TableCell value={filled ? r.w : ''} />
+        <TableCell value={filled ? r.d : ''} />
+        <TableCell value={filled ? r.l : ''} />
+        <TableCell value={filled ? formatGD(r.gd) : ''} className="gd" />
+        <TableCell value={filled ? r.pts : ''} className="pts" />
       </div>
-      <div className="st-cell">{filled ? r.p : ''}</div>
-      <div className="st-cell">{filled ? r.w : ''}</div>
-      <div className="st-cell">{filled ? r.d : ''}</div>
-      <div className="st-cell">{filled ? r.l : ''}</div>
-      <div className="st-cell gd">{filled ? formatGD(r.gd) : ''}</div>
-      <div className="st-cell pts">{filled ? r.pts : ''}</div>
-    </div>
+    </motion.div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.hoveredTeam === nextProps.hoveredTeam &&
+         prevProps.groupOrder === nextProps.groupOrder &&
+         prevProps.r.code === nextProps.r.code &&
+         prevProps.r.p === nextProps.r.p &&
+         prevProps.r.w === nextProps.r.w &&
+         prevProps.r.d === nextProps.r.d &&
+         prevProps.r.l === nextProps.r.l &&
+         prevProps.r.gd === nextProps.r.gd &&
+         prevProps.r.pts === nextProps.r.pts &&
+         prevProps.r.qualified === nextProps.r.qualified;
+});
 
-function ThirdPlaceTable({ rows }) {
+const ThirdsRow = React.memo(({ r, hoveredTeam, onMouseEnter, onMouseLeave }) => {
+  const [moved, setMoved] = useState(false);
+  const prevRank = useRef(r.thirdRank);
+
+  useEffect(() => {
+    if (r.thirdRank !== prevRank.current && prevRank.current !== '') {
+      setMoved(true);
+      const t = setTimeout(() => setMoved(false), 700);
+      prevRank.current = r.thirdRank;
+      return () => clearTimeout(t);
+    }
+    prevRank.current = r.thirdRank;
+  }, [r.thirdRank]);
+
+  const filled = r.p > 0;
+  const inCut = r.thirdRank <= 8;
+  const isHighlighted = r.code === hoveredTeam;
+
+  return (
+    <motion.div
+      layout
+      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+    >
+      <div
+        className={`thirds-row ${inCut ? 'in-cut' : ''} ${r.qualified ? 'qualified' : ''} ${moved ? 'moved' : ''} ${isHighlighted ? 'highlight' : ''}`}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
+        <div className="third-rank">{r.thirdRank}</div>
+        <div className="third-group">{r.group}</div>
+        <div className="st-team">
+          <img src={D.flag(r.code)} alt="" loading="lazy" />
+          <span>{D.TEAMS[r.code].name}</span>
+        </div>
+        <TableCell value={filled ? r.p : ''} />
+        <TableCell value={filled ? r.w : ''} />
+        <TableCell value={filled ? r.d : ''} />
+        <TableCell value={filled ? r.l : ''} />
+        <TableCell value={filled ? formatGD(r.gd) : ''} className="gd" />
+        <TableCell value={filled ? r.pts : ''} className="pts" />
+      </div>
+    </motion.div>
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.hoveredTeam === nextProps.hoveredTeam &&
+         prevProps.r.code === nextProps.r.code &&
+         prevProps.r.thirdRank === nextProps.r.thirdRank &&
+         prevProps.r.group === nextProps.r.group &&
+         prevProps.r.p === nextProps.r.p &&
+         prevProps.r.w === nextProps.r.w &&
+         prevProps.r.d === nextProps.r.d &&
+         prevProps.r.l === nextProps.r.l &&
+         prevProps.r.gd === nextProps.r.gd &&
+         prevProps.r.pts === nextProps.r.pts &&
+         prevProps.r.qualified === nextProps.r.qualified;
+});
+
+function ThirdPlaceTable({ rows, hoveredTeam, setHoveredTeam }) {
   if (!rows || rows.length === 0) return null;
 
   return (
@@ -82,41 +176,31 @@ function ThirdPlaceTable({ rows }) {
           <div>PTS</div>
         </div>
         <div className="thirds-rows">
-          {rows.map(r => {
-            const filled = r.p > 0;
-            const inCut = r.thirdRank <= 8;
-            return (
-              <div
-                className={`thirds-row ${inCut ? 'in-cut' : ''} ${r.qualified ? 'qualified' : ''}`}
-                key={`${r.group}-${r.code}`}
-              >
-                <div className="third-rank">{r.thirdRank}</div>
-                <div className="third-group">{r.group}</div>
-                <div className="st-team">
-                  <img src={D.flag(r.code)} alt="" loading="lazy" />
-                  <span>{D.TEAMS[r.code].name}</span>
-                </div>
-                <div className="st-cell">{filled ? r.p : ''}</div>
-                <div className="st-cell">{filled ? r.w : ''}</div>
-                <div className="st-cell">{filled ? r.d : ''}</div>
-                <div className="st-cell">{filled ? r.l : ''}</div>
-                <div className="st-cell gd">{filled ? formatGD(r.gd) : ''}</div>
-                <div className="st-cell pts">{filled ? r.pts : ''}</div>
-              </div>
-            );
-          })}
+          <LayoutGroup id="thirds-layout">
+            {rows.map(r => (
+              <ThirdsRow 
+                key={`${r.group}-${r.code}`} 
+                r={r} 
+                hoveredTeam={hoveredTeam}
+                onMouseEnter={() => setHoveredTeam(r.code)}
+                onMouseLeave={() => setHoveredTeam(null)}
+              />
+            ))}
+          </LayoutGroup>
         </div>
       </div>
     </article>
   );
 }
 
-function GroupFixtureRow({ fx, st }) {
+function GroupFixtureRow({ fx, st, hoveredTeam }) {
   if (!st) return null;
   const isLive = st.status === 'live' || st.status === 'ht';
+  const isHighlighted = hoveredTeam && (fx.a === hoveredTeam || fx.b === hoveredTeam);
+  const isDimmed = hoveredTeam && !isHighlighted;
 
   return (
-    <div className={`fx-row ${isLive ? 'is-live' : ''}`} id={`fx-${fx.id}`}>
+    <div className={`fx-row ${isLive ? 'is-live' : ''} ${isHighlighted ? 'highlight' : ''} ${isDimmed ? 'dim' : ''}`} id={`fx-${fx.id}`}>
       <div className="fx-when">
         {isLive ? (
           <>
@@ -216,9 +300,8 @@ function TiebreakerRules() {
   );
 }
 
-function GroupCard({ g, rows, groupOrder, fixtures, states, gc }) {
+function GroupCard({ g, rows, groupOrder, fixtures, states, gc, hoveredTeam, setHoveredTeam }) {
   const [expanded, setExpanded] = useState(false);
-  const [hoveredTeam, setHoveredTeam] = useState(null);
 
   return (
     <article 
@@ -246,15 +329,18 @@ function GroupCard({ g, rows, groupOrder, fixtures, states, gc }) {
           <div>PTS</div>
         </div>
         <div className="st-rows">
-          {rows.map(r => (
-            <GroupRow
-              key={r.code}
-              r={r}
-              groupOrder={groupOrder}
-              onMouseEnter={() => setHoveredTeam(r.code)}
-              onMouseLeave={() => setHoveredTeam(null)}
-            />
-          ))}
+          <LayoutGroup id={`group-layout-${g}`}>
+            {rows.map(r => (
+              <GroupRow
+                key={r.code}
+                r={r}
+                groupOrder={groupOrder}
+                hoveredTeam={hoveredTeam}
+                onMouseEnter={() => setHoveredTeam(r.code)}
+                onMouseLeave={() => setHoveredTeam(null)}
+              />
+            ))}
+          </LayoutGroup>
         </div>
         <div className={`fx-accordion ${expanded ? 'is-expanded' : ''}`}>
           <button className="fx-label" onClick={() => setExpanded(!expanded)} type="button">
@@ -276,9 +362,10 @@ function GroupCard({ g, rows, groupOrder, fixtures, states, gc }) {
   );
 }
 
-export default function Groups({ snapshot }) {
+const Groups = React.memo(function Groups({ snapshot }) {
   const gridRef = useRef(null);
   const colCount = useColumnCount(gridRef);
+  const [hoveredTeam, setHoveredTeam] = useState(null);
 
   if (!snapshot) return null;
 
@@ -293,7 +380,11 @@ export default function Groups({ snapshot }) {
       </div>
       <div className="thirds-and-rules-row">
         <div className="thirds-wrapper">
-          <ThirdPlaceTable rows={thirdStandings} />
+          <ThirdPlaceTable 
+            rows={thirdStandings} 
+            hoveredTeam={hoveredTeam}
+            setHoveredTeam={setHoveredTeam}
+          />
         </div>
         <div className="rules-wrapper">
           <TiebreakerRules />
@@ -317,6 +408,8 @@ export default function Groups({ snapshot }) {
                   fixtures={fixtures} 
                   states={states} 
                   gc={gc} 
+                  hoveredTeam={hoveredTeam}
+                  setHoveredTeam={setHoveredTeam}
                 />
               );
             })}
@@ -325,4 +418,6 @@ export default function Groups({ snapshot }) {
       </div>
     </section>
   );
-}
+});
+
+export default Groups;

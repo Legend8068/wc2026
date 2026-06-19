@@ -6,7 +6,7 @@ import spinnerAnimation from '../assets/music-spinner.json';
 
 const LottieComponent = Lottie.default || Lottie;
 
-export default function MusicPlayer() {
+const MusicPlayer = React.memo(function MusicPlayer() {
   const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -334,4 +334,6 @@ export default function MusicPlayer() {
       </div>
     </>
   );
-}
+});
+
+export default MusicPlayer;

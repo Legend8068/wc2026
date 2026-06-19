@@ -5,7 +5,7 @@ const HOVER_SELECTOR =
   'a, button, [role="button"], input, select, textarea, .clickable, .tab-btn, .mode-badge';
 const MAX_LOCK_WIDTH = 340; // don't frame huge elements — fall back to free reticle
 
-export default function CustomCursor() {
+const CustomCursor = React.memo(function CustomCursor() {
   const dotRef = useRef(null);
   const ringRef = useRef(null);
   const ringInnerRef = useRef(null);
@@ -168,4 +168,6 @@ export default function CustomCursor() {
       </div>
     </>
   );
-}
+});
+
+export default CustomCursor;

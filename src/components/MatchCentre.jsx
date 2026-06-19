@@ -118,7 +118,7 @@ function findFixture(snapshot, id) {
   return null;
 }
 
-export default function MatchCentre({ snapshot }) {
+const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
   // null until the user picks; falls back to the first non-empty tab below.
   const [tab, setTab] = useState(null);
   const [expandedMatchId, setExpandedMatchId] = useState(null);
@@ -485,7 +485,9 @@ export default function MatchCentre({ snapshot }) {
       </div>
     </RevealSection>
   );
-}
+});
+
+export default MatchCentre;
 
 function getShootoutSequence(fxId, pensA, pensB) {
   pensA = pensA || 0;

@@ -1,7 +1,7 @@
 import React from 'react';
 import D from '../data';
 
-export default function Ticker({ snapshot }) {
+const Ticker = React.memo(function Ticker({ snapshot }) {
   if (!snapshot) return null;
 
   const { states, teams, now } = snapshot;
@@ -99,4 +99,6 @@ export default function Ticker({ snapshot }) {
       </div>
     </div>
   );
-}
+});
+
+export default Ticker;

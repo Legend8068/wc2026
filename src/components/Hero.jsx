@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import BrandText from './BrandText';
 import InteractiveBall from './InteractiveBall';
 import MapIcon from './MapIcon';
@@ -115,7 +115,7 @@ function StatNumber({ value, isDate, animate }) {
   return <div className="stat-num">{count}</div>;
 }
 
-export default function Hero() {
+const Hero = React.memo(function Hero() {
   const statsLabelRef = useRef(null);
   const [statsRevealed, setStatsRevealed] = useState(false);
 
@@ -181,4 +181,6 @@ export default function Hero() {
       </div>
     </header>
   );
-}
+});
+
+export default Hero;

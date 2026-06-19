@@ -354,7 +354,7 @@ function RoundCol({ matches, colCls, label, states, teams }) {
   );
 }
 
-export default function Bracket({ snapshot }) {
+const Bracket = React.memo(function Bracket({ snapshot }) {
   const scrollRef = useRef(null);
   const centeredRef = useRef(false);
 
@@ -430,4 +430,6 @@ export default function Bracket({ snapshot }) {
       </div>
     </RevealSection>
   );
-}
+});
+
+export default Bracket;
