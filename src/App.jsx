@@ -47,7 +47,7 @@ function triggerConfetti() {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduced) return;
 
-  const colors = ['#f5c542', '#00c853', '#3366ff', '#e2001a', '#ffffff'];
+  const colors = ['#f5c542', '#00c853', '#3366ff', '#e2001a', '#BFD7EA'];
   for (let i = 0; i < 120; i++) {
     const c = document.createElement('div');
     c.className = 'confetti';

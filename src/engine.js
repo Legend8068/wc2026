@@ -521,7 +521,7 @@ export function computeStandings(states) {
     for (const fx of D.GROUP_FIXTURES) {
       if (fx.group !== g) continue;
       const st = states[fx.id];
-      if (!st || st.status !== 'ft') continue;
+      if (!st || !['ft', 'live', 'ht'].includes(st.status)) continue;
       const A = rows[fx.a], B = rows[fx.b];
       A.p++; B.p++; A.gf += st.sa; A.ga += st.sb; B.gf += st.sb; B.ga += st.sa;
       if (st.sa > st.sb) { A.w++; B.l++; A.pts += 3; }
@@ -553,7 +553,7 @@ export function rankThirds(standings) {
 function enumerateGroupOutcomes(group, states, standings) {
   const codes = D.GROUPS[group];
   const fixtures = D.GROUP_FIXTURES.filter(f => f.group === group);
-  const remaining = fixtures.filter(f => !states[f.id] || states[f.id].status !== 'ft');
+  const remaining = fixtures.filter(f => !states[f.id] || !['ft', 'live', 'ht'].includes(states[f.id].status));
   const basePts = {};
   standings[group].forEach(r => { basePts[r.code] = r.pts; });
 

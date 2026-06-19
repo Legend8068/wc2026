@@ -22,7 +22,7 @@ import './LoadingScreen.css';
    ============================================================ */
 
 const GOLD = '#f5c542';
-const NET = 'rgba(255,255,255,0.72)';
+const NET = 'rgba(191, 215, 234,0.72)';
 const G_LIGHT = '#2c4a36';
 const G_DARK = '#213a2c';
 
@@ -497,7 +497,7 @@ function LoadingScreen({ onDone }) {
           <motion.div key={`ball-ghost-${i}`} aria-hidden="true"
             style={{ position: 'absolute', left: geo.cx - geo.d / 2, top: geo.cy - geo.d / 2, width: geo.d, height: geo.d,
                      borderRadius: geo.d * 0.2, pointerEvents: 'none', willChange: 'transform',
-                     background: 'radial-gradient(circle at 38% 32%, rgba(255,255,255,0.6), rgba(221,229,240,0.28) 68%, transparent 75%)',
+                     background: 'radial-gradient(circle at 38% 32%, rgba(191, 215, 234,0.6), rgba(221,229,240,0.28) 68%, transparent 75%)',
                      filter: `blur(${7 + i * 6}px)` }}
             initial={{ x: geo.shootFromX, y: geo.belowOffset, opacity: 0, scaleX: 0.84, scaleY: 1.22 }}
             animate={
@@ -543,7 +543,7 @@ function LoadingScreen({ onDone }) {
           <defs>
             <clipPath id="wc-ball-clip"><rect x="0" y="0" width="100" height="100" rx="20" ry="20" /></clipPath>
             <radialGradient id="wc-ball-shade" cx="36%" cy="30%" r="80%">
-              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="0%" stopColor="#BFD7EA" />
               <stop offset="62%" stopColor="#f5f7fa" />
               <stop offset="100%" stopColor="#dfe5ee" />
             </radialGradient>
@@ -551,7 +551,7 @@ function LoadingScreen({ onDone }) {
           {/* rounded-square body (same shape as the 0) */}
           <g clipPath="url(#wc-ball-clip)">
             <rect x="0" y="0" width="100" height="100" fill="url(#wc-ball-shade)" />
-            <ellipse cx="33" cy="28" rx="24" ry="17" fill="#ffffff" opacity="0.5" />
+            <ellipse cx="33" cy="28" rx="24" ry="17" fill="#BFD7EA" opacity="0.5" />
 
             {/* Seam Lines */}
             <g stroke="#d5d0c5" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none">
