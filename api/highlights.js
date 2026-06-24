@@ -14,15 +14,89 @@
    never play in our iframe. Mediacorp uploads its own highlights
    and allows embedding.
 
+   Mediacorp titles look like:
+     "Panama 0-1 Croatia | Group L | FIFA World Cup 2026™ Highlights"
+   so we parse the two team names out of the title and only
+   return a video when BOTH names match the requested match —
+   otherwise we return no video (the UI shows its fallback)
+   rather than a wrong clip.
+
    On success: { videoId, title }
-   On any failure: { videoId: null, reason, detail? } with a 200
-   so the frontend can simply show its fallback. The `reason`
-   field is for debugging — hit this endpoint directly in a
-   browser (e.g. /api/highlights?a=Spain&b=Germany) to see it.
+   On any failure: { videoId: null, reason, detail? } with a 200.
+   Hit this endpoint directly (e.g. /api/highlights?a=Panama&b=Croatia)
+   to inspect the reason / matched title.
    ============================================================ */
 
 // Mediacorp Sports — youtube.com/channel/UCCc3h5l7RvGzCAbZ1ApxOYw
 const CHANNEL_ID = 'UCCc3h5l7RvGzCAbZ1ApxOYw';
+
+// Words that are never part of a team name — ignored in token matching.
+const STOP = new Set([
+  'fifa', 'world', 'cup', 'highlights', 'highlight', 'group', 'match', 'final',
+  'finals', 'round', 'quarter', 'quarterfinal', 'semi', 'semifinal', 'women',
+  'womens', 'mens', 'football', 'soccer', 'full', 'extended', 'and', 'the',
+]);
+
+// Teams our data spells differently from Mediacorp / broadcast convention.
+const ALIAS_GROUPS = [
+  ['turkiye', 'turkey'],
+  ['unitedstates', 'usa', 'us', 'unitedstatesofamerica'],
+  ['cotedivoire', 'ivorycoast'],
+  ['caboverde', 'capeverde'],
+  ['czechia', 'czechrepublic'],
+  ['southkorea', 'korearepublic', 'republicofkorea'],
+  ['northkorea', 'koreadpr', 'dprkorea'],
+  ['drcongo', 'congodr', 'democraticrepublicofcongo'],
+  ['bosniaherz', 'bosniaandherzegovina', 'bosniaherzegovina'],
+  ['iran', 'iriran'],
+].map((g) => new Set(g));
+
+// "Côte d'Ivoire" -> "cotedivoire"  (letters only, accents stripped)
+const norm = (s) =>
+  (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');
+
+// significant words (>= 4 letters, not stop-words)
+const tokens = (s) =>
+  (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z]+/g, ' ').split(' ')
+    .filter((w) => w.length >= 4 && !STOP.has(w));
+
+// Do two team names (possibly spelt differently) refer to the same team?
+function sameTeam(x, y) {
+  const nx = norm(x), ny = norm(y);
+  if (!nx || !ny) return false;
+  if (nx === ny) return true;
+  if (nx.length >= 4 && ny.length >= 4 && (nx.includes(ny) || ny.includes(nx))) return true;
+  if (ALIAS_GROUPS.some((g) => g.has(nx) && g.has(ny))) return true;
+  const tx = tokens(x), ty = tokens(y);
+  return tx.some((t) => ty.includes(t));
+}
+
+// Pull the two team names out of a Mediacorp title.
+// "Panama 0-1 Croatia | Group L | …"  ->  ["Panama", "Croatia"]
+// "Spain 1-1 (4-2) Italy | …"          ->  ["Spain", "Italy"]
+function extractTeams(title) {
+  const head = String(title || '').split('|')[0];
+  let parts = head
+    .split(/\s*\d+\s*[-–—]\s*\d+\s*/)            // split on score(s)
+    .map((s) => s.replace(/[()]/g, ' ').trim())
+    .filter(Boolean);
+  if (parts.length >= 2) return [parts[0], parts[parts.length - 1]];
+  parts = head.split(/\s+vs?\.?\s+/i).map((s) => s.trim()).filter(Boolean); // "A vs B"
+  if (parts.length >= 2) return [parts[0], parts[parts.length - 1]];
+  return null;
+}
+
+// Does this title's pair match our requested pair (either home/away order)?
+function titleMatchesPair(title, a, b) {
+  const ts = extractTeams(title);
+  if (!ts) return false;
+  const [eA, eB] = ts;
+  return (sameTeam(eA, a) && sameTeam(eB, b)) || (sameTeam(eA, b) && sameTeam(eB, a));
+}
+
+// Exported for unit testing; the Vercel runtime only uses the default export.
+export { sameTeam, extractTeams, titleMatchesPair };
 
 export default async function handler(req, res) {
   const a = (req.query?.a || '').toString().trim();
@@ -35,20 +109,15 @@ export default async function handler(req, res) {
   if (!key) return res.status(200).json({ videoId: null, reason: 'no-key' });
   if (!a || !b) return res.status(200).json({ videoId: null, reason: 'bad-request' });
 
-  // Mediacorp titles look like:
-  //   "Panama 0-1 Croatia | Group L | FIFA World Cup 2026™ Highlights"
-  // i.e. "{TeamA} {score} {TeamB}" (no "vs") + "FIFA World Cup 2026 Highlights".
-  // Query for the two names + that suffix; a search costs the same quota at
-  // any maxResults, so we pull a handful and pick the one whose title actually
-  // contains both team names (filters out compilations / previews / other
-  // matches), falling back to the top relevance result.
+  // A search costs the same quota at any maxResults, so pull a batch and match
+  // by title rather than trusting relevance order.
   const url = new URL('https://www.googleapis.com/youtube/v3/search');
   url.searchParams.set('part', 'snippet');
   url.searchParams.set('channelId', CHANNEL_ID);
   url.searchParams.set('q', `${a} ${b} FIFA World Cup 2026 Highlights`);
   url.searchParams.set('type', 'video');
   url.searchParams.set('videoEmbeddable', 'true');
-  url.searchParams.set('maxResults', '6');
+  url.searchParams.set('maxResults', '12');
   url.searchParams.set('order', 'relevance');
   url.searchParams.set('key', key);
 
@@ -57,9 +126,6 @@ export default async function handler(req, res) {
     const data = await r.json().catch(() => null);
 
     if (!r.ok) {
-      // Surface YouTube's own message (e.g. "API key not valid",
-      // "requests from referer ... are blocked", "quota exceeded")
-      // so the misconfiguration is obvious — without echoing the key.
       const detail = data?.error?.message || `http-${r.status}`;
       return res.status(200).json({ videoId: null, reason: `yt-${r.status}`, detail });
     }
@@ -69,23 +135,19 @@ export default async function handler(req, res) {
       return res.status(200).json({ videoId: null, reason: 'no-results' });
     }
 
-    const na = a.toLowerCase();
-    const nb = b.toLowerCase();
-    const isHl = (t) => t.includes('highlight');
-    const both = (t) => t.includes(na) && t.includes(nb);
-    const titleOf = (it) => (it.snippet?.title || '').toLowerCase();
+    // Only accept a video whose title actually names BOTH teams. No relevance
+    // fallback — a wrong video is worse than none.
+    const pick = items.find((it) => titleMatchesPair(it.snippet?.title, a, b));
 
-    // Prefer a result naming both teams AND saying "highlights"; then either;
-    // then the top relevance hit.
-    const pick =
-      items.find((it) => both(titleOf(it)) && isHl(titleOf(it))) ||
-      items.find((it) => both(titleOf(it))) ||
-      items[0];
+    if (!pick) {
+      return res.status(200).json({
+        videoId: null,
+        reason: 'no-match',
+        detail: items.slice(0, 8).map((it) => it.snippet?.title).filter(Boolean),
+      });
+    }
 
-    return res.status(200).json({
-      videoId: pick.id.videoId,
-      title: pick.snippet?.title || null,
-    });
+    return res.status(200).json({ videoId: pick.id.videoId, title: pick.snippet?.title || null });
   } catch (err) {
     return res.status(200).json({ videoId: null, reason: 'fetch-failed', detail: String(err?.message || err) });
   }
