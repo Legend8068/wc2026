@@ -950,6 +950,71 @@ section {
   border: 0;
 }
 
+/* Blocked-embed fallback: clickable thumbnail that deep-links to YouTube. */
+.mc-hl-blocked {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md, 10px);
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+  text-decoration: none;
+}
+
+.mc-hl-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* hqdefault is 4:3 with letterbox bars; nudge scale so the 16:9 crop is clean */
+  transform: scale(1.35);
+}
+
+.mc-hl-blocked-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(rgba(8, 12, 24, 0.35), rgba(8, 12, 24, 0.7));
+  color: #fff;
+  transition: background 0.2s ease;
+}
+
+.mc-hl-blocked:hover .mc-hl-blocked-overlay {
+  background: linear-gradient(rgba(8, 12, 24, 0.45), rgba(8, 12, 24, 0.8));
+}
+
+.mc-hl-play {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(213, 55, 42, 0.92);
+  font-size: 22px;
+  padding-left: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.mc-hl-blocked:hover .mc-hl-play {
+  transform: scale(1.08);
+}
+
+.mc-hl-blocked-label {
+  font-family: var(--head);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 /* Loading / empty states share a centred column. */
 .mc-highlights--state {
   display: flex;

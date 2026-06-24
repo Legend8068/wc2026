@@ -122,6 +122,80 @@ function findFixture(snapshot, id) {
    (or re-expanding a card) never re-queries the API. key "A__B" -> videoId|null */
 const _highlightCache = new Map();
 
+/* Load the YouTube IFrame Player API once. We need the real player (not a bare
+   <iframe>) so we can listen for onError — embeds that the content owner blocks
+   (FIFA Content-ID can block even broadcaster uploads) fire error 101/150, and
+   we swap them for a thumbnail + "Watch on YouTube" link. */
+let _ytApiPromise = null;
+function loadYouTubeApi() {
+  if (typeof window === 'undefined') return Promise.reject();
+  if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+  if (_ytApiPromise) return _ytApiPromise;
+  _ytApiPromise = new Promise((resolve) => {
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (typeof prev === 'function') prev(); resolve(window.YT); };
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  });
+  return _ytApiPromise;
+}
+
+function YouTubeEmbed({ videoId, teamAName, teamBName }) {
+  const [blocked, setBlocked] = useState(false);
+  const boxRef = useRef(null);
+
+  useEffect(() => {
+    setBlocked(false);
+    let cancelled = false;
+    let player = null;
+    loadYouTubeApi().then((YT) => {
+      if (cancelled || !boxRef.current || !YT?.Player) return;
+      const mount = document.createElement('div');
+      boxRef.current.appendChild(mount); // YT replaces this node with its iframe
+      player = new YT.Player(mount, {
+        videoId,
+        host: 'https://www.youtube-nocookie.com',
+        playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
+        // 101/150 = embedding disabled by owner, 100 = unavailable, 2/5 = other.
+        // Any error → the embed won't play here, so offer the link instead.
+        events: { onError: () => { if (!cancelled) setBlocked(true); } },
+      });
+    }).catch(() => { if (!cancelled) setBlocked(true); });
+
+    return () => {
+      cancelled = true;
+      try { player?.destroy?.(); } catch { /* node already gone */ }
+      if (boxRef.current) boxRef.current.innerHTML = '';
+    };
+  }, [videoId]);
+
+  if (blocked) {
+    return (
+      <a
+        className="mc-hl-blocked"
+        href={`https://www.youtube.com/watch?v=${videoId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          className="mc-hl-thumb"
+          src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+          alt={`${teamAName} vs ${teamBName} — highlights`}
+          loading="lazy"
+        />
+        <span className="mc-hl-blocked-overlay">
+          <span className="mc-hl-play" aria-hidden="true">▶</span>
+          <span className="mc-hl-blocked-label">Watch highlights on YouTube ↗</span>
+        </span>
+      </a>
+    );
+  }
+
+  return <div className="mc-hl-video" ref={boxRef} />;
+}
+
 function MatchHighlights({ teamAName, teamBName }) {
   const key = `${teamAName}__${teamBName}`;
   const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(
@@ -164,15 +238,7 @@ function MatchHighlights({ teamAName, teamBName }) {
   if (status === 'found' && videoId) {
     return (
       <div className="mc-highlights">
-        <div className="mc-hl-video">
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0`}
-            title={`${teamAName} vs ${teamBName} — highlights`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            loading="lazy"
-          />
-        </div>
+        <YouTubeEmbed videoId={videoId} teamAName={teamAName} teamBName={teamBName} />
       </div>
     );
   }

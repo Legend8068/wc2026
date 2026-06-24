@@ -1,34 +1,34 @@
 /* ============================================================
    WC2026 — Match highlights lookup (Vercel serverless function)
 
-   Searches Mediacorp Sports' YouTube channel (Singapore's
-   official WC2026 broadcaster) for a match's highlights and
-   returns a single embeddable videoId. The YouTube Data API v3
-   key is held server-side here so it never ships to the browser
-   — set it in your Vercel project as the YOUTUBE_API_KEY
-   environment variable.
+   Searches YouTube for a match's highlights and returns a single
+   embeddable videoId. The YouTube Data API v3 key is held
+   server-side here so it never ships to the browser — set it in
+   your Vercel project as the YOUTUBE_API_KEY environment variable.
 
-   We use Mediacorp rather than FIFA's own channel because FIFA
-   content-blocks third-party embedding ("This video contains
-   content from FIFA, who has blocked it…"), so FIFA clips can
-   never play in our iframe. Mediacorp uploads its own highlights
-   and allows embedding.
+   Sourcing (decided with the user):
+   • Search ALL of YouTube — Mediacorp's per-match highlights live
+     on mewatch / TikTok / IG / FB, not reliably on YouTube, so a
+     single-channel restriction returned nothing for most matches.
+   • Skip FIFA's own channel — FIFA content-blocks third-party
+     embedding ("This video contains content from FIFA…"), so its
+     clips can never play in our iframe.
+   • Only return a video whose TITLE names BOTH teams (in either
+     order) so we never surface a wrong match. No relevance
+     fallback — a wrong video is worse than none.
 
-   Mediacorp titles look like:
-     "Panama 0-1 Croatia | Group L | FIFA World Cup 2026™ Highlights"
-   so we parse the two team names out of the title and only
-   return a video when BOTH names match the requested match —
-   otherwise we return no video (the UI shows its fallback)
-   rather than a wrong clip.
+   Embeds that are still blocked at playback (Content-ID can block
+   embedding even on broadcaster uploads) are handled on the client
+   via the IFrame Player API's onError → thumbnail + "Watch on
+   YouTube" link.
 
    On success: { videoId, title }
    On any failure: { videoId: null, reason, detail? } with a 200.
    Hit this endpoint directly (e.g. /api/highlights?a=Panama&b=Croatia)
-   to inspect the reason / matched title.
+   to inspect the reason / candidate titles.
    ============================================================ */
 
-// Mediacorp Sports — youtube.com/channel/UCCc3h5l7RvGzCAbZ1ApxOYw
-const CHANNEL_ID = 'UCCc3h5l7RvGzCAbZ1ApxOYw';
+const FIFA_CHANNEL_ID = 'UCpcTrCXblq78GZrTUTLWeBw'; // FIFA — embed-blocked, skip
 
 // Words that are never part of a team name — ignored in token matching.
 const STOP = new Set([
@@ -37,7 +37,7 @@ const STOP = new Set([
   'womens', 'mens', 'football', 'soccer', 'full', 'extended', 'and', 'the',
 ]);
 
-// Teams our data spells differently from Mediacorp / broadcast convention.
+// Teams our data spells differently from broadcast convention.
 const ALIAS_GROUPS = [
   ['turkiye', 'turkey'],
   ['unitedstates', 'usa', 'us', 'unitedstatesofamerica'],
@@ -72,27 +72,50 @@ function sameTeam(x, y) {
   return tx.some((t) => ty.includes(t));
 }
 
-// Pull the two team names out of a Mediacorp title.
-// "Panama 0-1 Croatia | Group L | …"  ->  ["Panama", "Croatia"]
-// "Spain 1-1 (4-2) Italy | …"          ->  ["Spain", "Italy"]
+// Pull the two team names out of a highlight title. Handles, across any
+// "|"-separated segment:
+//   "Panama 0-1 Croatia | Group L | …"   -> ["Panama", "Croatia"]
+//   "Spain 1-1 (4-2) Italy | …"          -> ["Spain", "Italy"]
+//   "… | Netherlands v Sweden | …"       -> ["Netherlands", "Sweden"]
+//   "Netherlands vs Sweden Extended …"   -> ["Netherlands", "Sweden Extended …"]
 function extractTeams(title) {
-  const head = String(title || '').split('|')[0];
-  let parts = head
-    .split(/\s*\d+\s*[-–—]\s*\d+\s*/)            // split on score(s)
-    .map((s) => s.replace(/[()]/g, ' ').trim())
-    .filter(Boolean);
-  if (parts.length >= 2) return [parts[0], parts[parts.length - 1]];
-  parts = head.split(/\s+vs?\.?\s+/i).map((s) => s.trim()).filter(Boolean); // "A vs B"
-  if (parts.length >= 2) return [parts[0], parts[parts.length - 1]];
+  const segs = String(title || '').split('|');
+  for (const seg of segs) {
+    const parts = seg
+      .split(/\s*\d+\s*[-–—]\s*\d+\s*/)
+      .map((s) => s.replace(/[()]/g, ' ').trim())
+      .filter(Boolean);
+    if (parts.length >= 2) return [parts[0], parts[parts.length - 1]];
+  }
+  for (const seg of segs) {
+    const parts = seg.split(/\s+vs?\.?\s+/i).map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 2) return [parts[0], parts[parts.length - 1]];
+  }
   return null;
 }
 
-// Does this title's pair match our requested pair (either home/away order)?
+// Is `ourName` present anywhere in the title (alias/token aware)?
+function titleHasTeam(title, ourName) {
+  const nt = norm(title);
+  const variants = new Set([norm(ourName)]);
+  for (const g of ALIAS_GROUPS) {
+    if (g.has(norm(ourName))) for (const v of g) variants.add(v);
+  }
+  for (const v of variants) if (v.length >= 4 && nt.includes(v)) return true;
+  const tt = tokens(title);
+  return tokens(ourName).some((t) => tt.includes(t));
+}
+
+// Does this title belong to our match (both teams named, either order)?
 function titleMatchesPair(title, a, b) {
   const ts = extractTeams(title);
-  if (!ts) return false;
-  const [eA, eB] = ts;
-  return (sameTeam(eA, a) && sameTeam(eB, b)) || (sameTeam(eA, b) && sameTeam(eB, a));
+  if (ts) {
+    const [eA, eB] = ts;
+    if ((sameTeam(eA, a) && sameTeam(eB, b)) || (sameTeam(eA, b) && sameTeam(eB, a))) return true;
+  }
+  // Looser net for odd title shapes: both teams named somewhere + "highlight".
+  if (/highlight/i.test(title) && titleHasTeam(title, a) && titleHasTeam(title, b)) return true;
+  return false;
 }
 
 // Exported for unit testing; the Vercel runtime only uses the default export.
@@ -109,15 +132,12 @@ export default async function handler(req, res) {
   if (!key) return res.status(200).json({ videoId: null, reason: 'no-key' });
   if (!a || !b) return res.status(200).json({ videoId: null, reason: 'bad-request' });
 
-  // A search costs the same quota at any maxResults, so pull a batch and match
-  // by title rather than trusting relevance order.
   const url = new URL('https://www.googleapis.com/youtube/v3/search');
   url.searchParams.set('part', 'snippet');
-  url.searchParams.set('channelId', CHANNEL_ID);
-  url.searchParams.set('q', `${a} ${b} FIFA World Cup 2026 Highlights`);
+  url.searchParams.set('q', `${a} ${b} FIFA World Cup 2026 highlights`);
   url.searchParams.set('type', 'video');
   url.searchParams.set('videoEmbeddable', 'true');
-  url.searchParams.set('maxResults', '12');
+  url.searchParams.set('maxResults', '15');
   url.searchParams.set('order', 'relevance');
   url.searchParams.set('key', key);
 
@@ -130,15 +150,15 @@ export default async function handler(req, res) {
       return res.status(200).json({ videoId: null, reason: `yt-${r.status}`, detail });
     }
 
-    const items = (data?.items || []).filter((it) => it?.id?.videoId);
+    // Drop FIFA's own uploads (embed-blocked) and anything without a videoId.
+    const items = (data?.items || []).filter(
+      (it) => it?.id?.videoId && it?.snippet?.channelId !== FIFA_CHANNEL_ID
+    );
     if (items.length === 0) {
       return res.status(200).json({ videoId: null, reason: 'no-results' });
     }
 
-    // Only accept a video whose title actually names BOTH teams. No relevance
-    // fallback — a wrong video is worse than none.
     const pick = items.find((it) => titleMatchesPair(it.snippet?.title, a, b));
-
     if (!pick) {
       return res.status(200).json({
         videoId: null,
