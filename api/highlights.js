@@ -28,7 +28,25 @@
    to inspect the reason / candidate titles.
    ============================================================ */
 
-const FIFA_CHANNEL_ID = 'UCpcTrCXblq78GZrTUTLWeBw'; // FIFA — embed-blocked, skip
+// Sources we never use:
+//  • FIFA — content-blocks third-party embedding ("video contains content
+//    from FIFA, who has blocked it…"), so its clips can't play in our iframe.
+//  • FOX Soccer / FOX Sports — their WC highlights are geo-restricted (US),
+//    so they won't play for most of our (Singapore-based) audience.
+const BLOCKED_CHANNEL_IDS = new Set([
+  'UCpcTrCXblq78GZrTUTLWeBw', // FIFA
+]);
+// FOX has several channels; match by name + the "| FOX Sports" title suffix
+// they use, rather than guessing channel ids.
+const BLOCKED_SOURCE_RE = /fox\s*(soccer|sports)/i;
+
+function isBlockedSource(it) {
+  const s = it?.snippet || {};
+  if (BLOCKED_CHANNEL_IDS.has(s.channelId)) return true;
+  if (BLOCKED_SOURCE_RE.test(s.channelTitle || '')) return true;
+  if (BLOCKED_SOURCE_RE.test(s.title || '')) return true;
+  return false;
+}
 
 // Words that are never part of a team name — ignored in token matching.
 const STOP = new Set([
@@ -119,7 +137,7 @@ function titleMatchesPair(title, a, b) {
 }
 
 // Exported for unit testing; the Vercel runtime only uses the default export.
-export { sameTeam, extractTeams, titleMatchesPair };
+export { sameTeam, extractTeams, titleMatchesPair, isBlockedSource };
 
 export default async function handler(req, res) {
   const a = (req.query?.a || '').toString().trim();
@@ -150,9 +168,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ videoId: null, reason: `yt-${r.status}`, detail });
     }
 
-    // Drop FIFA's own uploads (embed-blocked) and anything without a videoId.
+    // Drop blocked sources (FIFA embed-blocked, FOX geo-restricted) and
+    // anything without a videoId.
     const items = (data?.items || []).filter(
-      (it) => it?.id?.videoId && it?.snippet?.channelId !== FIFA_CHANNEL_ID
+      (it) => it?.id?.videoId && !isBlockedSource(it)
     );
     if (items.length === 0) {
       return res.status(200).json({ videoId: null, reason: 'no-results' });
