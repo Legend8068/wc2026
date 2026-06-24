@@ -156,7 +156,7 @@ function MatchHighlights({ teamAName, teamBName }) {
     return (
       <div className="mc-highlights mc-highlights--state">
         <div className="mc-hl-spinner" aria-hidden="true" />
-        <div className="mc-hl-msg">Searching FIFA highlights…</div>
+        <div className="mc-hl-msg">Searching for highlights…</div>
       </div>
     );
   }

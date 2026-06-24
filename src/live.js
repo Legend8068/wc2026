@@ -580,10 +580,21 @@ export async function fetchHighlight(teamAName, teamBName) {
   try {
     const q = `a=${encodeURIComponent(teamAName)}&b=${encodeURIComponent(teamBName)}`;
     const r = await fetch(`/api/highlights?${q}`);
-    if (!r.ok) return null;
+    if (!r.ok) {
+      // Likely the serverless function isn't deployed (plain `vite`, file://,
+      // or a misconfigured Vercel build → SPA HTML instead of JSON).
+      console.warn(`[highlights] /api/highlights HTTP ${r.status} — function not reachable`);
+      return null;
+    }
     const data = await r.json();
+    if (!data.videoId) {
+      // reason/detail come from the function: no-key, yt-403 (key restricted/
+      // API disabled/quota), no-results, fetch-failed …
+      console.warn(`[highlights] no video for "${teamAName} vs ${teamBName}":`, data.reason || 'unknown', data.detail || '');
+    }
     return data.videoId || null;
-  } catch {
+  } catch (err) {
+    console.warn('[highlights] lookup failed (non-JSON response or network):', err?.message || err);
     return null;
   }
 }
