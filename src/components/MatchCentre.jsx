@@ -125,7 +125,7 @@ const _highlightCache = new Map();
 function MatchHighlights({ teamAName, teamBName }) {
   const key = `${teamAName}__${teamBName}`;
   const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(
-    `${teamAName} vs ${teamBName} highlights`
+    `${teamAName} ${teamBName} FIFA World Cup 2026 highlights`
   )}`;
 
   const cached = _highlightCache.get(key);

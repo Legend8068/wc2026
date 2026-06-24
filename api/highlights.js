@@ -35,13 +35,20 @@ export default async function handler(req, res) {
   if (!key) return res.status(200).json({ videoId: null, reason: 'no-key' });
   if (!a || !b) return res.status(200).json({ videoId: null, reason: 'bad-request' });
 
+  // Mediacorp titles look like:
+  //   "Panama 0-1 Croatia | Group L | FIFA World Cup 2026™ Highlights"
+  // i.e. "{TeamA} {score} {TeamB}" (no "vs") + "FIFA World Cup 2026 Highlights".
+  // Query for the two names + that suffix; a search costs the same quota at
+  // any maxResults, so we pull a handful and pick the one whose title actually
+  // contains both team names (filters out compilations / previews / other
+  // matches), falling back to the top relevance result.
   const url = new URL('https://www.googleapis.com/youtube/v3/search');
   url.searchParams.set('part', 'snippet');
   url.searchParams.set('channelId', CHANNEL_ID);
-  url.searchParams.set('q', `${a} vs ${b} highlights`);
+  url.searchParams.set('q', `${a} ${b} FIFA World Cup 2026 Highlights`);
   url.searchParams.set('type', 'video');
   url.searchParams.set('videoEmbeddable', 'true');
-  url.searchParams.set('maxResults', '1');
+  url.searchParams.set('maxResults', '6');
   url.searchParams.set('order', 'relevance');
   url.searchParams.set('key', key);
 
@@ -57,13 +64,27 @@ export default async function handler(req, res) {
       return res.status(200).json({ videoId: null, reason: `yt-${r.status}`, detail });
     }
 
-    const item = data?.items?.[0];
-    if (!item?.id?.videoId) {
+    const items = (data?.items || []).filter((it) => it?.id?.videoId);
+    if (items.length === 0) {
       return res.status(200).json({ videoId: null, reason: 'no-results' });
     }
+
+    const na = a.toLowerCase();
+    const nb = b.toLowerCase();
+    const isHl = (t) => t.includes('highlight');
+    const both = (t) => t.includes(na) && t.includes(nb);
+    const titleOf = (it) => (it.snippet?.title || '').toLowerCase();
+
+    // Prefer a result naming both teams AND saying "highlights"; then either;
+    // then the top relevance hit.
+    const pick =
+      items.find((it) => both(titleOf(it)) && isHl(titleOf(it))) ||
+      items.find((it) => both(titleOf(it))) ||
+      items[0];
+
     return res.status(200).json({
-      videoId: item.id.videoId,
-      title: item.snippet?.title || null,
+      videoId: pick.id.videoId,
+      title: pick.snippet?.title || null,
     });
   } catch (err) {
     return res.status(200).json({ videoId: null, reason: 'fetch-failed', detail: String(err?.message || err) });
