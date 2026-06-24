@@ -28,7 +28,7 @@ function KoCard({ m, st, teams }) {
   const codeA = teams?.[0];
   const codeB = teams?.[1];
 
-  const live = st && (st.status === 'live' || st.status === 'ht');
+  const live = st && ['live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(st.status);
   const isFt = st && st.status === 'ft' && st.winner;
 
   const renderRow = (code, side) => {
@@ -72,9 +72,22 @@ function KoCard({ m, st, teams }) {
       <div className="ko-head">
         <span className="kh-l">{m.round === 'SF' ? 'SEMI · ' : ''}{m.id}</span>
         {live ? (
-          <span className="live-tag">● LIVE {st.status === 'ht' ? 'HT' : `${st.minute}′`}</span>
+          <span className="live-tag">● LIVE {
+            st.status === 'ht' ? 'HT' : 
+            st.status === 'et-ht' ? 'ET HT' : 
+            st.status === 'et1' ? 'ET1' : 
+            st.status === 'et2' ? 'ET2' : 
+            st.status === 'pen' ? 'PEN' : 
+            st.isDelayed ? 'DELAYED' :
+            st.isSuspended ? 'SUSPENDED' :
+            `${st.minute}′`
+          }</span>
         ) : (
-          <span className="kh-r">{m.d} · {m.t}</span>
+          <span className="kh-r">
+            {st && st.isDelayed ? 'DELAYED' :
+             st && st.isSuspended ? 'SUSPENDED' :
+             `${m.d} · ${m.t}`}
+          </span>
         )}
       </div>
       <div className="ko-body">
@@ -89,7 +102,7 @@ function FinalCard({ m, st, teams }) {
   const codeA = teams?.[0];
   const codeB = teams?.[1];
 
-  const live = st && (st.status === 'live' || st.status === 'ht');
+  const live = st && ['live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(st.status);
   const isFt = st && st.status === 'ft' && st.winner;
 
   const renderRow = (code, side) => {
@@ -134,11 +147,20 @@ function FinalCard({ m, st, teams }) {
         <div className="f-title">FINAL</div>
         {live ? (
           <div className="f-sub">
-            <span className="live-tag">● LIVE {st.status === 'ht' ? 'HT' : `${st.minute}′`}</span>
+            <span className="live-tag">● LIVE {
+              st.status === 'ht' ? 'HT' : 
+              st.status === 'et-ht' ? 'ET HT' : 
+              st.status === 'et1' ? 'ET1' : 
+              st.status === 'et2' ? 'ET2' : 
+              st.status === 'pen' ? 'PEN' : 
+              st.isDelayed ? 'DELAYED' :
+              st.isSuspended ? 'SUSPENDED' :
+              `${st.minute}′`
+            }</span>
           </div>
         ) : (
           <div className="f-sub" id="final-sub">
-            M104 · 20 JUL · NEW YORK / NJ
+            M104 · 20 JUL · NEW YORK / NJ {st && st.isDelayed ? '· DELAYED' : st && st.isSuspended ? '· SUSPENDED' : ''}
           </div>
         )}
       </div>
@@ -155,7 +177,7 @@ function ThirdPlaceCard({ m, st, teams }) {
   const codeA = teams?.[0];
   const codeB = teams?.[1];
 
-  const live = st && (st.status === 'live' || st.status === 'ht');
+  const live = st && ['live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(st.status);
   const isFt = st && st.status === 'ft' && st.winner;
 
   const renderRow = (code, side) => {
@@ -200,11 +222,20 @@ function ThirdPlaceCard({ m, st, teams }) {
         <div className="t-title">THIRD PLACE</div>
         {live ? (
           <div className="t-sub">
-            <span className="live-tag">● LIVE {st.status === 'ht' ? 'HT' : `${st.minute}′`}</span>
+            <span className="live-tag">● LIVE {
+              st.status === 'ht' ? 'HT' : 
+              st.status === 'et-ht' ? 'ET HT' : 
+              st.status === 'et1' ? 'ET1' : 
+              st.status === 'et2' ? 'ET2' : 
+              st.status === 'pen' ? 'PEN' : 
+              st.isDelayed ? 'DELAYED' :
+              st.isSuspended ? 'SUSPENDED' :
+              `${st.minute}′`
+            }</span>
           </div>
         ) : (
           <div className="t-sub" id="third-sub">
-            M103 · 19 JUL · MIAMI
+            M103 · 19 JUL · MIAMI {st && st.isDelayed ? '· DELAYED' : st && st.isSuspended ? '· SUSPENDED' : ''}
           </div>
         )}
       </div>

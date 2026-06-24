@@ -701,5 +701,5 @@ export function snapshot(now, mode, liveStates) {
   const finalSt = states.M104;
   const champion = (finalSt && finalSt.status === 'ft' && finalSt.winner) ? finalSt.winner : null;
 
-  return { now, states, standings, thirdStandings, teams, allGroupsDone: allDone, champion };
+  return { now, mode, states, standings, thirdStandings, teams, allGroupsDone: allDone, champion };
 }

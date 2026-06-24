@@ -312,7 +312,7 @@ function computeTournamentStats(snapshot) {
     initTeam(a);
     initTeam(b);
 
-    if (st.status === 'ft' || st.status === 'live' || st.status === 'ht') {
+    if (['ft', 'live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(st.status)) {
       teamAgg[a].played++;
       teamAgg[b].played++;
       teamAgg[a].goals += st.sa || 0;
@@ -388,7 +388,7 @@ function computeTournamentStats(snapshot) {
     initTeam(fxA);
     initTeam(fxB);
 
-    if (st.status === 'ft' || st.status === 'live' || st.status === 'ht') {
+    if (['ft', 'live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(st.status)) {
       teamAgg[fxA].played++;
       teamAgg[fxB].played++;
       teamAgg[fxA].goals += st.sa || 0;
@@ -486,7 +486,7 @@ function computeTournamentStats(snapshot) {
     .map(t => ({ ...t }));
 
   const totalGoals = teamList.reduce((s, t) => s + t.goals, 0);
-  const totalMatches = [...Object.values(states)].filter(s => s && (s.status === 'ft' || s.status === 'live' || s.status === 'ht')).length;
+  const totalMatches = [...Object.values(states)].filter(s => s && ['ft', 'live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(s.status)).length;
 
   return {
     topScorers, penaltyKings, topCards, ownGoalsList,

@@ -84,8 +84,16 @@ function parseEvent(ev) {
   // the break never slips through as a live minute (it used to read "0′ LIVE").
   const detailBlob = `${type.name || ''} ${type.shortDetail || ''} ${type.detail || ''} ${type.description || ''}`;
   const isHalftime = type.name === 'STATUS_HALFTIME' || /halftime|half[\s-]?time|\bht\b/i.test(detailBlob);
+  const isDelayed = type.name === 'STATUS_DELAYED' || /delay/i.test(detailBlob);
+  const isSuspended = type.name === 'STATUS_SUSPENDED' || /suspend/i.test(detailBlob);
+  const period = (ev.status && ev.status.period) || 1;
   const status = espnState === 'post' ? 'ft'
-    : espnState === 'in' ? (isHalftime ? 'ht' : 'live')
+    : espnState === 'in' ? (
+        period === 5 ? 'pen' :
+        period === 4 ? 'et2' :
+        period === 3 ? (isHalftime ? 'et-ht' : 'et1') :
+        (isHalftime ? 'ht' : 'live')
+      )
     : 'pre';
 
   const getStats = (competitor) => {
@@ -146,12 +154,16 @@ function parseEvent(ev) {
     period: (ev.status && ev.status.period) || 1, // 1 = first half, 2 = second half (used to rebuild the current XI)
     sa: status === 'pre' ? null : parseInt(home.score, 10) || 0,
     sb: status === 'pre' ? null : parseInt(away.score, 10) || 0,
-    minute: status === 'live' ? liveMin : (status === 'pre' ? 0 : 90),
-    clockText: status === 'live' ? (liveClockText || String(liveMin)) : null, // e.g. "90+4"
+    minute: ['live', 'et1', 'et2'].includes(status) ? liveMin : (status === 'pre' ? 0 : 90),
+    clockText: ['live', 'et1', 'et2'].includes(status) ? (liveClockText || String(liveMin)) : null, // e.g. "90+4"
     details,
     statsHome: getStats(home),
     statsAway: getStats(away),
-    venue: venueStr
+    venue: venueStr,
+    homeId: home.id,
+    awayId: away.id,
+    isDelayed,
+    isSuspended
   };
   if (status === 'ft') {
     if (home.winner) st.winner = a;
@@ -396,6 +408,8 @@ export async function fetchLineup(eid, a, b, isoDate, st) {
   }
   if (!lu || !lu.home || !lu.away) return null;
 
+  lu.shootout = sumJson?.shootout || null;
+
   // Team ids (for matching substitution / injury events to a side).
   let homeId = null, awayId = null;
   (sumJson?.rosters || []).forEach(r => {
@@ -554,4 +568,22 @@ function parseRosters(rosters, events = [], currentPeriod = 1) {
     res[side] = { formation, xi, subs };
   }
   return res;
+}
+
+/* ── Match highlights ─────────────────────────────────────────────────────
+   Asks our /api/highlights serverless proxy for an embeddable YouTube videoId
+   from FIFA's official channel. The API key stays server-side; this only ever
+   sees a videoId. Any failure — no key, no result, or running the static site
+   without the function (plain `vite`, file://) — resolves to null so the UI
+   falls back gracefully. */
+export async function fetchHighlight(teamAName, teamBName) {
+  try {
+    const q = `a=${encodeURIComponent(teamAName)}&b=${encodeURIComponent(teamBName)}`;
+    const r = await fetch(`/api/highlights?${q}`);
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data.videoId || null;
+  } catch {
+    return null;
+  }
 }

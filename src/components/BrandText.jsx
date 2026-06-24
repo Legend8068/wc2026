@@ -69,14 +69,13 @@ export default function BrandText({ text, className = "", style = {}, useBallFor
               <defs>
                 <clipPath id={`brand-ball-clip-${index}`}><rect x="0" y="0" width="100" height="100" rx="20" ry="20" /></clipPath>
                 <radialGradient id={`brand-ball-shade-${index}`} cx="36%" cy="30%" r="80%">
-                  <stop offset="0%" stopColor="#BFD7EA" />
-                  <stop offset="62%" stopColor="#f5f7fa" />
-                  <stop offset="100%" stopColor="#dfe5ee" />
+                  <stop offset="0%" stopColor="#ffffff" />
+                  <stop offset="62%" stopColor="#f8fafc" />
+                  <stop offset="100%" stopColor="#e2e8f0" />
                 </radialGradient>
               </defs>
               <g clipPath={`url(#brand-ball-clip-${index})`}>
                 <rect x="0" y="0" width="100" height="100" fill={`url(#brand-ball-shade-${index})`} />
-                <ellipse cx="33" cy="28" rx="24" ry="17" fill="#BFD7EA" opacity="0.5" />
                 
                 {/* Seam Lines */}
                 <g stroke="#d5d0c5" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none">

@@ -10,4 +10,22 @@ export default defineConfig({
     port: process.env.PORT ? Number(process.env.PORT) : undefined,
     strictPort: !!process.env.PORT,
   },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rolldownOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/framer-motion')) {
+            return 'vendor-motion';
+          }
+          if (id.includes('node_modules/lottie-web') || id.includes('node_modules/lottie-react')) {
+            return 'vendor-lottie';
+          }
+        },
+      },
+    },
+  },
 })

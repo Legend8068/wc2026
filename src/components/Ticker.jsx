@@ -25,7 +25,7 @@ const Ticker = React.memo(function Ticker({ snapshot }) {
     .map(i => ({ ...i, st: states[i.fx.id] }))
     .filter(i => i.st);
 
-  const lives = withState.filter(i => i.st.status === 'live' || i.st.status === 'ht');
+  const lives = withState.filter(i => ['live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(i.st.status));
   const finished = withState.filter(i => i.st.status === 'ft')
     .sort((a, b) => b.fx.ts - a.fx.ts)
     .slice(0, 8);
@@ -44,11 +44,19 @@ const Ticker = React.memo(function Ticker({ snapshot }) {
     const flagA = D.flag(fx.a);
     const flagB = D.flag(fx.b);
 
-    if (st.status === 'live' || st.status === 'ht') {
-      const minText = st.status === 'ht' ? 'HT' : `${st.clockText || st.minute}′`;
+    if (['live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(st.status)) {
+      const minText = st.status === 'ht' ? 'HT' :
+                      st.status === 'et-ht' ? 'ET HT' :
+                      st.status === 'et1' ? `${st.minute}′ ET1` :
+                      st.status === 'et2' ? `${st.minute}′ ET2` :
+                      st.status === 'pen' ? 'PENALTIES' :
+                      st.isDelayed ? `${st.clockText || st.minute}′ DELAYED` :
+                      st.isSuspended ? `${st.clockText || st.minute}′ SUSP` :
+                      `${st.clockText || st.minute}′`;
+      const liveCls = st.isDelayed || st.isSuspended ? 't-live t-live--delayed' : 't-live';
       return (
         <span className="ticker-item" key={indexKey}>
-          <span className="t-live">● {minText}</span>
+          <span className={liveCls}>● {minText}</span>
           <img src={flagA} alt="" />
           {teamA.name}
           <span className="t-score">{st.sa} – {st.sb}</span>

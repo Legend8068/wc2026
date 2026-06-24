@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import D from '../data';
 import { lineups, applySimBadges, venueFor } from '../engine';
-import { fetchLineup } from '../live';
+import { fetchLineup, fetchHighlight } from '../live';
 import RevealSection from './RevealSection';
 import BrandText from './BrandText';
 import VisualLineup from './VisualLineup';
@@ -118,13 +118,92 @@ function findFixture(snapshot, id) {
   return null;
 }
 
-const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
+/* Highlights lookups are cached for the session so toggling Stats ⇄ Highlights
+   (or re-expanding a card) never re-queries the API. key "A__B" -> videoId|null */
+const _highlightCache = new Map();
+
+function MatchHighlights({ teamAName, teamBName }) {
+  const key = `${teamAName}__${teamBName}`;
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+    `${teamAName} vs ${teamBName} highlights`
+  )}`;
+
+  const cached = _highlightCache.get(key);
+  const [status, setStatus] = useState(
+    cached ? (cached.videoId ? 'found' : 'none') : 'loading'
+  );
+  const [videoId, setVideoId] = useState(cached ? cached.videoId : null);
+
+  useEffect(() => {
+    const hit = _highlightCache.get(key);
+    if (hit) {
+      setStatus(hit.videoId ? 'found' : 'none');
+      setVideoId(hit.videoId);
+      return;
+    }
+    let cancelled = false;
+    setStatus('loading');
+    fetchHighlight(teamAName, teamBName).then((id) => {
+      _highlightCache.set(key, { videoId: id || null });
+      if (cancelled) return;
+      setStatus(id ? 'found' : 'none');
+      setVideoId(id || null);
+    });
+    return () => { cancelled = true; };
+  }, [key, teamAName, teamBName]);
+
+  if (status === 'loading') {
+    return (
+      <div className="mc-highlights mc-highlights--state">
+        <div className="mc-hl-spinner" aria-hidden="true" />
+        <div className="mc-hl-msg">Searching FIFA highlights…</div>
+      </div>
+    );
+  }
+
+  if (status === 'found' && videoId) {
+    return (
+      <div className="mc-highlights">
+        <div className="mc-hl-video">
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0`}
+            title={`${teamAName} vs ${teamBName} — highlights`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            loading="lazy"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // No embeddable highlight (no key / no official upload / sim matchup).
+  return (
+    <div className="mc-highlights mc-highlights--state">
+      {/* Animation slot — drop a Lottie/asset in here later. */}
+      <div className="mc-hl-anim" aria-hidden="true" />
+      <div className="mc-hl-msg">Highlights not available yet.</div>
+      <a
+        className="mc-hl-search"
+        href={searchUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+      >
+        Search highlights ↗
+      </a>
+    </div>
+  );
+}
+
+const MatchCentre = React.memo(function MatchCentre({ snapshot, mode }) {
   // null until the user picks; falls back to the first non-empty tab below.
   const [tab, setTab] = useState(null);
   const [expandedMatchId, setExpandedMatchId] = useState(null);
   // Real ESPN line-ups, lazily fetched when a card is expanded: fxId -> { eid, status, lu }
   const [lineupCache, setLineupCache] = useState({});
   const [viewPens, setViewPens] = useState(false);
+  const [viewHighlights, setViewHighlights] = useState(false);
 
   // Preserve the horizontal scroll position of the strip across expand/collapse:
   // expanding filters the strip down to one card (scroll resets), so we remember
@@ -142,9 +221,16 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
 
   // Deps kept primitive so this only re-runs when the open match (or its
   // status) changes — not on every 500 ms render tick.
-  const expSt = snapshot?.states?.[expandedMatchId];
+  const states = snapshot?.states || {};
+  const teams = snapshot?.teams || {};
+  const now = snapshot?.now || Date.now();
+  const isDemo = mode === 'demo';
+
+  const expSt = states[expandedMatchId];
   const expEid = expSt?.eid;
   const expStatus = expSt?.status;
+  const refetchTrigger = expStatus === 'pen' ? Math.floor(now / 30000) : 0;
+
   useEffect(() => {
     if (!expandedMatchId || !expEid) return;          // sim-only / unmapped → keep sim line-up
     const fx = findFixture(snapshot, expandedMatchId);
@@ -159,11 +245,9 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
       .catch(err => console.warn('lineup fetch failed', err));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expandedMatchId, expEid, expStatus]);
+  }, [expandedMatchId, expEid, expStatus, refetchTrigger]);
 
   if (!snapshot) return null;
-
-  const { states, teams, now } = snapshot;
 
   // Gather all playable fixtures (group stage + resolved knockout matches)
   const allPlayable = [];
@@ -183,7 +267,7 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
   // Filter based on active, recent and upcoming categories
   const activeMatches = allPlayable.filter(i => {
     const st = states[i.fx.id];
-    return st && (st.status === 'live' || st.status === 'ht');
+    return st && ['live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(st.status);
   });
 
   const recentMatches = allPlayable
@@ -233,24 +317,42 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
       // Expanding — remember where the user was in the horizontal list.
       if (stripRef.current) savedScrollRef.current = stripRef.current.scrollLeft;
       setViewPens(false);
+      setViewHighlights(false);
       return matchId;
     });
   };
 
   const renderCard = ({ fx, label }) => {
+
     const st = states[fx.id];
+    
     if (!st) return null;
 
-    const isLive = st.status === 'live' || st.status === 'ht';
+    const isLive = ['live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(st.status);
     const isFt = st.status === 'ft';
     const canExpand = isLive || isFt;
     const isExpanded = expandedMatchId === fx.id;
 
-    const minTxt = isLive
-      ? (st.status === 'ht' ? 'HT' : `${st.clockText || st.minute}′ LIVE`)
-      : isFt ? 'FULL TIME' : `${fx.d} · ${fx.t} SGT`;
+    let minTxt = '';
+    if (isLive) {
+      if (st.status === 'ht') minTxt = 'HT';
+      else if (st.status === 'et-ht') minTxt = 'ET HT';
+      else if (st.status === 'et1') minTxt = `${st.minute}′ ET1`;
+      else if (st.status === 'et2') minTxt = `${st.minute}′ ET2`;
+      else if (st.status === 'pen') minTxt = 'PENALTIES';
+      else if (st.isDelayed) minTxt = `${st.clockText || st.minute}′ DELAYED`;
+      else if (st.isSuspended) minTxt = `${st.clockText || st.minute}′ SUSPENDED`;
+      else minTxt = `${st.clockText || st.minute}′ LIVE`;
+    } else {
+      if (isFt) minTxt = 'FULL TIME';
+      else if (st.isDelayed) minTxt = 'DELAYED';
+      else if (st.isSuspended) minTxt = 'SUSPENDED';
+      else minTxt = `${fx.d} · ${fx.t} SGT`;
+    }
 
-    const minCls = isLive ? '' : isFt ? ' ft' : ' pre';
+    const minCls = isLive ? (st.isDelayed || st.isSuspended ? ' delayed' : '')
+      : isFt ? ' ft'
+      : (st.isDelayed || st.isSuspended ? ' pre delayed' : ' pre');
 
     const teamA = D.TEAMS[fx.a];
     const teamB = D.TEAMS[fx.b];
@@ -260,16 +362,16 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
 
     // Prefer the real ESPN line-up (lazily fetched on expand, already badged);
     // until it arrives — or for sim/unmapped matches — show the deterministic
-    // simulated line-up so there's always something to render.
+    // simulated line-up
     const cached = lineupCache[fx.id];
     const espnLu = cached && cached.eid === st.eid ? cached.lu : null;
-    const lu = (canExpand && isExpanded)
-      ? (espnLu || applySimBadges(lineups(fx.id, fx.a, fx.b), fx, st))
-      : null;
+    const baseLu = espnLu || applySimBadges(lineups(fx.id, fx.a, fx.b), fx, st);
+    
+    const lu = (canExpand && isExpanded) ? baseLu : null;
 
     // Which XI to show: the second-half line-up once the second half is under
     // way (and at full time); the first-half XI before then and during the break.
-    const half = (st.status === 'ft' || (st.status === 'live' && st.minute > 45)) ? 2 : 1;
+    const half = (st.status === 'ft' || st.status === 'et1' || st.status === 'et2' || st.status === 'pen' || (st.status === 'live' && st.minute > 45)) ? 2 : 1;
 
     return (
       <div
@@ -314,7 +416,7 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
             <div className="lcv-info-box">
               <div className="lcv-label">{label}</div>
               <div className={`lcv-time${minCls}`}>
-                {isLive && <span className="lcv-live-dot" />}
+                {isLive && <span className={`lcv-live-dot${st.isDelayed || st.isSuspended ? ' is-delayed' : ''}`} />}
                 {minTxt}
               </div>
             </div>
@@ -336,6 +438,29 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
 
         {canExpand && isExpanded && (
           <div className="lc-details-drawer" onClick={(e) => e.stopPropagation()}>
+            {isFt && (
+              <div className="lc-view-toggle">
+                <button
+                  type="button"
+                  className={`lc-view-tab ${!viewHighlights ? 'active' : ''}`}
+                  onClick={() => setViewHighlights(false)}
+                >
+                  MATCH STATS
+                </button>
+                <button
+                  type="button"
+                  className={`lc-view-tab ${viewHighlights ? 'active' : ''}`}
+                  onClick={() => setViewHighlights(true)}
+                >
+                  ▶ HIGHLIGHTS
+                </button>
+              </div>
+            )}
+
+            {isFt && viewHighlights ? (
+              <MatchHighlights teamAName={teamA.name} teamBName={teamB.name} />
+            ) : (
+            <div className="lc-drawer-body">
             <div className="lc-drawer-left">
               {/* Timeline Section */}
               <div className="mc-timeline-section">
@@ -355,13 +480,30 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
                       <div className="so-col">ROUND</div>
                       <div className="so-col">{teamB.name}</div>
                     </div>
-                    {getShootoutSequence(fx.id, st.pensA, st.pensB).map((r, i) => (
-                      <div className="so-row" key={i}>
-                        <div className="so-res">{r.a ? <PenGoal /> : <PenMiss />}</div>
-                        <div className="so-rnd">{i + 1}</div>
-                        <div className="so-res">{r.b !== undefined ? (r.b ? <PenGoal /> : <PenMiss />) : ''}</div>
-                      </div>
-                    ))}
+                    {(() => {
+                      const soData = lu?.shootout || [];
+                      const norm = (s) => String(s).toLowerCase().replace(/[^a-z]/g, '');
+                      const homeShots = soData.find(t => t.id === st.homeId || norm(t.team) === norm(teamA.name))?.shots || [];
+                      const awayShots = soData.find(t => t.id === st.awayId || norm(t.team) === norm(teamB.name))?.shots || [];
+                      const rounds = Math.max(5, homeShots.length, awayShots.length);
+                      return Array.from({ length: rounds }).map((_, i) => {
+                        const hShot = homeShots[i];
+                        const aShot = awayShots[i];
+                        return (
+                          <div className="so-row" key={i}>
+                            <div className="so-res home-res">
+                              {hShot && <div className="so-player">{hShot.player}</div>}
+                              {hShot ? (hShot.didScore ? <PenGoal /> : <PenMiss />) : ''}
+                            </div>
+                            <div className="so-rnd">{i + 1}</div>
+                            <div className="so-res away-res">
+                              {aShot ? (aShot.didScore ? <PenGoal /> : <PenMiss />) : ''}
+                              {aShot && <div className="so-player">{aShot.player}</div>}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 ) : (
                   <>
@@ -442,6 +584,8 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
                 />
               </div>
             )}
+            </div>
+            )}
           </div>
         )}
       </div>
@@ -488,33 +632,3 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot }) {
 });
 
 export default MatchCentre;
-
-function getShootoutSequence(fxId, pensA, pensB) {
-  pensA = pensA || 0;
-  pensB = pensB || 0;
-  const rounds = Math.max(5, pensA, pensB);
-  const getArr = (goals) => {
-    const a = Array(goals).fill(true);
-    while (a.length < rounds) a.push(false);
-    return a;
-  };
-  const arrA = getArr(pensA);
-  const arrB = getArr(pensB);
-  
-  let h = 0; 
-  if (fxId) {
-    for (let i = 0; i < fxId.length; i++) h += fxId.charCodeAt(i);
-  }
-  const shuf = (arr, seed) => {
-    let s = seed;
-    for (let i = arr.length - 1; i > 0; i--) {
-      s = (s * 16807) % 2147483647;
-      const j = s % (i + 1);
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-  };
-  shuf(arrA, h);
-  shuf(arrB, h + 1);
-
-  return Array.from({length: rounds}).map((_, i) => ({ a: arrA[i], b: arrB[i] }));
-}

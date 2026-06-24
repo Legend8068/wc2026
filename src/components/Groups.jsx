@@ -195,7 +195,7 @@ function ThirdPlaceTable({ rows, hoveredTeam, setHoveredTeam }) {
 
 function GroupFixtureRow({ fx, st, hoveredTeam }) {
   if (!st) return null;
-  const isLive = st.status === 'live' || st.status === 'ht';
+  const isLive = ['live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(st.status);
   const isHighlighted = hoveredTeam && (fx.a === hoveredTeam || fx.b === hoveredTeam);
   const isDimmed = hoveredTeam && !isHighlighted;
 
@@ -205,12 +205,25 @@ function GroupFixtureRow({ fx, st, hoveredTeam }) {
         {isLive ? (
           <>
             <div className="d">{fx.d}</div>
-            <div className="live-min">{st.status === 'ht' ? 'HT' : `${st.clockText || st.minute}′`}</div>
+            <div className="live-min">
+              {st.status === 'ht' ? 'HT' :
+               st.status === 'et-ht' ? 'ET HT' :
+               st.status === 'et1' ? `${st.minute}′ ET1` :
+               st.status === 'et2' ? `${st.minute}′ ET2` :
+               st.status === 'pen' ? 'PENALTIES' :
+               st.isDelayed ? `${st.clockText || st.minute}′ DELAYED` :
+               st.isSuspended ? `${st.clockText || st.minute}′ SUSP` :
+               `${st.clockText || st.minute}′`}
+            </div>
           </>
         ) : (
           <>
             <div className="d">{fx.d}</div>
-            <div className="t">{fx.t}</div>
+            <div className="t">
+              {st.isDelayed ? 'DELAYED' :
+               st.isSuspended ? 'SUSPENDED' :
+               fx.t}
+            </div>
           </>
         )}
       </div>

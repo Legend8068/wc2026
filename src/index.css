@@ -16,7 +16,7 @@
 
   /* — Ink / text — */
   --ink: #1a2744;
-  --white: #BFD7EA;
+  --white: #ffffff;
   --paper: #f5f7fa;
   --paper-dim: #e9ecf2;
 
@@ -113,6 +113,7 @@ a {
   letter-spacing: 0.04em;
   white-space: nowrap;
   flex: 1;
+  color: #ffffff;
 }
 
 .brand em {
@@ -131,7 +132,7 @@ a {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.18em;
-  color: var(--muted);
+  color: #ffffff;
 }
 
 .nav-links {
@@ -145,14 +146,14 @@ a {
 
 .nav-links a {
   text-decoration: none;
-  color: var(--muted);
+  color: #ffffff;
   padding: 6px 14px;
   border-radius: 999px;
   transition: color 0.2s, background 0.2s;
 }
 
 .nav-links a:hover {
-  color: var(--white);
+  color: #ffffff;
   background: rgba(191, 215, 234, 0.08);
 }
 
@@ -176,7 +177,7 @@ a {
   font-weight: 500;
   font-size: 13px;
   letter-spacing: 0.06em;
-  color: var(--muted);
+  color: #ffffff;
   white-space: nowrap;
 }
 
@@ -188,7 +189,7 @@ a {
   font-weight: 700;
   font-size: 14px;
   letter-spacing: 0.1em;
-  color: var(--white);
+  color: #ffffff;
   background: rgba(226, 0, 26, 0.15);
   border: 1.5px solid var(--red);
   border-radius: 999px;
@@ -439,19 +440,19 @@ a {
   font-weight: 600;
   letter-spacing: 0.2em;
   font-size: clamp(14px, 1.8vw, 24px);
-  color: var(--muted);
+  color: #ffffff;
 }
 
 .hero-brand-year {
   font-size: clamp(50px, 7vw, 110px);
-  color: var(--white);
+  color: #ffffff;
   margin-top: 12px;
   filter: drop-shadow(0 4px 30px rgba(51, 102, 255, 0.3));
 }
 
 .hero-brand-hosts {
   font-size: clamp(14px, 2vw, 24px);
-  color: var(--white);
+  color: #ffffff;
   margin-top: 20px;
   flex-wrap: wrap;
 }
@@ -494,8 +495,17 @@ a {
   opacity: 1;
   filter: drop-shadow(0 8px 24px rgba(51, 102, 255, 0.25));
   transition: filter 0.08s linear;
-  color: #BFD7EA;
+  color: #ffffff;
+}
+
+.hero-map .hm-map-shapes {
   fill: currentColor;
+}
+
+.hero-map .hm-map-shapes path,
+.hero-map .hm-map-shapes rect,
+.hero-map .hm-map-shapes polygon {
+  filter: none;
 }
 
 .hero-map-wrapper:hover .hero-map,
@@ -516,7 +526,7 @@ a {
   font-weight: 600;
   letter-spacing: 0.12em;
   font-size: clamp(11px, 1.1vw, 14px);
-  color: var(--muted);
+  color: #ffffff;
   margin-bottom: 14px;
   text-align: center;
 }
@@ -861,6 +871,12 @@ section {
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
+.lc-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .lc-drawer-left {
   display: flex;
   flex-direction: column;
@@ -868,7 +884,7 @@ section {
 }
 
 @media (min-width: 1000px) {
-  .lc-details-drawer {
+  .lc-drawer-body {
     flex-direction: row;
     align-items: flex-start;
   }
@@ -878,6 +894,118 @@ section {
   .lc-drawer-right {
     flex: 0 0 480px;
   }
+}
+
+/* ── Stats ⇄ Highlights toggle (FT cards) ── */
+.lc-view-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.lc-view-tab {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.04);
+  border: none;
+  font-family: var(--head);
+  font-weight: 800;
+  font-size: 12px;
+  padding: 11px;
+  border-radius: 8px;
+  color: var(--muted-warm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.1em;
+}
+
+.lc-view-tab:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.lc-view-tab.active {
+  background: var(--ink);
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ── Highlights view ── */
+.mc-highlights {
+  width: 100%;
+}
+
+.mc-hl-video {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md, 10px);
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+}
+
+.mc-hl-video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Loading / empty states share a centred column. */
+.mc-highlights--state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 200px;
+  text-align: center;
+  padding: 28px 16px;
+}
+
+.mc-hl-msg {
+  font-family: var(--head);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--muted-warm);
+}
+
+.mc-hl-search {
+  font-family: var(--head);
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--white);
+  background: var(--ink);
+  padding: 10px 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mc-hl-search:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+/* Animation slot — placeholder reserves the space until an asset is added. */
+.mc-hl-anim {
+  width: 96px;
+  height: 96px;
+}
+
+.mc-hl-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(0, 0, 0, 0.12);
+  border-top-color: var(--ink);
+  animation: mc-hl-spin 0.8s linear infinite;
+}
+
+@keyframes mc-hl-spin {
+  to { transform: rotate(360deg); }
 }
 
 @keyframes slide-down {
@@ -1339,6 +1467,26 @@ section {
   0% { box-shadow: 0 0 0 0 rgba(226, 0, 26, 0.5); }
   70% { box-shadow: 0 0 0 7px rgba(226, 0, 26, 0); }
   100% { box-shadow: 0 0 0 0 rgba(226, 0, 26, 0); }
+}
+
+.lcv-live-dot.is-delayed,
+.lcv-live-dot.is-suspended {
+  background: var(--gold);
+  animation: dot-pulse-gold 1.3s ease-out infinite;
+}
+
+@keyframes dot-pulse-gold {
+  0% { box-shadow: 0 0 0 0 rgba(245, 197, 66, 0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(245, 197, 66, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 197, 66, 0); }
+}
+
+.lcv-time.delayed {
+  color: var(--gold) !important;
+}
+
+.t-live.t-live--delayed {
+  color: var(--gold) !important;
 }
 
 /* ---- LIVE tab accent ---- */
@@ -3380,7 +3528,7 @@ section {
 }
 
 .cw-card-x {
-  color: rgba(191, 215, 234, 0.8);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 14px;
   font-weight: 700;
 }
@@ -4436,6 +4584,116 @@ footer .f-note {
   max-width: 1080px;
   margin: 0 auto;
   aspect-ratio: 2816 / 1536;
+  transition: aspect-ratio 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hm-wrap.hm-wrap--sg {
+  aspect-ratio: 800 / 500;
+}
+
+/* ── Side Navigation Arrows (icon-only, fixed circle) ── */
+.hm-side-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid rgba(191, 215, 234, 0.1);
+  color: var(--muted);
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: background 0.3s ease, border-color 0.3s ease,
+              box-shadow 0.3s ease, transform 0.3s ease;
+  animation: hm-arrow-in 0.5s 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hm-side-arrow-icon {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.hm-side-arrow:hover {
+  background: var(--bg-light);
+  color: var(--white);
+  border-color: rgba(51, 102, 255, 0.35);
+  box-shadow: 0 4px 24px rgba(51, 102, 255, 0.2), 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.hm-side-arrow.is-clicked {
+  background: var(--blue);
+  color: var(--white);
+  border-color: #8cb4ff;
+  box-shadow: 0 0 30px rgba(51, 102, 255, 0.8), 0 0 10px rgba(255, 255, 255, 0.5);
+  transform: translateY(-50%) scale(0.95);
+}
+
+.hm-side-arrow.is-clicked .hm-side-arrow-icon {
+  filter: brightness(2) drop-shadow(0 0 4px rgba(255,255,255,0.8));
+}
+
+.hm-side-arrow--left {
+  left: 12px;
+}
+
+.hm-side-arrow--right {
+  right: 12px;
+}
+
+@keyframes hm-arrow-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(var(--arrow-dx, 0));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.hm-side-arrow--left  { --arrow-dx: -20px; }
+.hm-side-arrow--right { --arrow-dx:  20px; }
+
+@media (min-width: 1140px) {
+  .hm-side-arrow--left  { left: -80px; }
+  .hm-side-arrow--right { right: -80px; }
+}
+
+/* ── View Sides Transition (Draw In / Draw Out) ──
+   Outgoing map "draws out": a horizontal wipe retracts right→left.
+   Incoming map "draws in":  a horizontal wipe extends left→right,
+   delayed so the erase clears before the new sketch begins.        */
+.hm-view-side {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  clip-path: inset(0 100% 0 0);
+  /* Draw-out (retract) timing — snappy ease-in */
+  transition:
+    opacity    0.35s       cubic-bezier(0.4, 0, 1, 1),
+    clip-path  0.6s        cubic-bezier(0.55, 0, 0.68, 0.53);
+}
+.hm-view-side.is-active {
+  opacity: 1;
+  pointer-events: auto;
+  clip-path: inset(-15% -15% -15% -15%);
+  z-index: 2;
+  /* Draw-in (extend) timing — organic ease-out, delayed */
+  transition:
+    opacity    0.4s  0.3s  cubic-bezier(0, 0, 0.2, 1),
+    clip-path  0.75s 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* the silhouette — land only (MapIcon paints with currentColor, no ocean) */
@@ -4445,13 +4703,24 @@ footer .f-note {
   width: 100%;
   height: 100%;
   display: block;
-  fill: url(#hm-grad);
-  filter: drop-shadow(0 0 20px rgba(0, 243, 255, 0.2)) drop-shadow(0 10px 40px rgba(51, 102, 255, 0.2));
-  transition: filter 0.4s ease-out;
+  /* Rest: just a depth shadow so the silhouette reads against the bg.
+     The neon glow is added on hover only (see .hm-wrap:hover .hm-map).
+     The filter lives on the single SVG element rather than the ~600 paths,
+     so the hover state re-rasterizes one cached layer instead of hundreds —
+     that's what keeps it from tanking the framerate to ~16fps. */
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
+  transition: filter 0.35s ease;
 }
 
+/* Neon halo on hover only */
 .hm-wrap:hover .hm-map {
-  filter: drop-shadow(0 0 30px rgba(0, 243, 255, 0.4)) drop-shadow(0 15px 50px rgba(51, 102, 255, 0.6));
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45))
+          drop-shadow(0 0 18px rgba(0, 243, 255, 0.55))
+          drop-shadow(0 14px 46px rgba(51, 102, 255, 0.5));
+}
+
+.hm-map-shapes {
+  fill: url(#hm-grad);
 }
 
 /* ── Country layers ───────────────────────────────────────────────
@@ -4463,9 +4732,12 @@ footer .f-note {
   inset: 0;
 }
 
-.hm-geo .hm-map {
-  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
-  transition: color 0.4s ease, filter 0.4s ease;
+.hm-geo .hm-map-shapes path,
+.hm-geo .hm-map-shapes rect,
+.hm-geo .hm-map-shapes polygon {
+  /* Glow moved to the .hm-map element (single cached layer). Keep only a
+     cheap colour transition for any currentColor tinting. */
+  transition: color 0.4s ease;
 }
 
 /* Hover → that country lights up to a lighter shade + coloured glow. */
@@ -4479,7 +4751,9 @@ footer .f-note {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hm-geo .hm-map {
+  .hm-geo .hm-map-shapes path,
+  .hm-geo .hm-map-shapes rect,
+  .hm-geo .hm-map-shapes polygon {
     transition: none;
   }
 }
@@ -4518,7 +4792,8 @@ footer .f-note {
   height: 30px;
   padding: 0;
   border: none;
-  background: none;
+  background: rgba(0, 0, 0, 0.01);
+  border-radius: 50%;
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -4537,6 +4812,7 @@ footer .f-note {
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25), 0 0 10px var(--c);
   transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   animation: hm-pulse 2.6s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .hm-marker.is-active .hm-core {
@@ -4570,6 +4846,7 @@ footer .f-note {
   border: 1.5px solid var(--c);
   transform: translate(-50%, -50%) scale(0.4);
   opacity: 0;
+  pointer-events: none;
 }
 
 .hm-marker.is-active .hm-ring {
@@ -4682,7 +4959,7 @@ footer .f-note {
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.14em;
-  color: #BFD7EA;
+  color: #ffffff;
   background: var(--c);
   padding: 3px 9px;
   border-radius: 5px;
@@ -4811,6 +5088,129 @@ footer .f-note {
   .hm-marker.is-active .hm-ring {
     animation: none;
   }
+}
+
+/* ============================== SINGAPORE MAP ============================== */
+
+
+
+.hm-map--sg .hm-map-shapes path,
+.hm-map--sg .hm-map-shapes rect,
+.hm-map--sg .hm-map-shapes polygon {
+  fill: url(#hm-grad);
+}
+
+/* Singapore reads with a more vivid neon halo — hover only, applied once
+   to the SVG element. */
+.hm-wrap:hover .hm-map.hm-map--sg {
+  filter: drop-shadow(0 0 22px rgba(0, 243, 255, 0.65))
+          drop-shadow(0 16px 52px rgba(51, 102, 255, 0.55));
+}
+
+/* Animate geo layer on map switch */
+.hm-geo {
+  animation: hm-fade-in 0.5s ease both;
+}
+
+@keyframes hm-fade-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* SG venue-type marker colours */
+.hm-marker.hm-sg-cc         { --c: #2a9d4f; }
+.hm-marker.hm-sg-activesg   { --c: #2563eb; }
+.hm-marker.hm-sg-safra      { --c: #e8505f; }
+.hm-marker.hm-sg-special    { --c: #d97706; }
+.hm-marker.hm-sg-hometeamns { --c: #0d9488; }
+
+/* Slightly smaller dots for denser SG map */
+.hm-dot--sg .hm-core {
+  width: 9px;
+  height: 9px;
+}
+
+/* No radial ripple rings on the dense Singapore map — keep markers as clean
+   dots (rings stay on the host map). */
+.hm-dot--sg .hm-ring {
+  display: none;
+}
+
+/* Final-only markers are dimmed until hovered */
+.hm-marker.is-dim .hm-core {
+  opacity: 0.4;
+}
+.hm-marker.is-dim.is-active .hm-core {
+  opacity: 1;
+}
+
+/* SG legend dot colours */
+.hm-sg-cc .hm-leg-dot         { background: #2a9d4f; box-shadow: 0 0 8px #2a9d4f; }
+.hm-sg-activesg .hm-leg-dot   { background: #2563eb; box-shadow: 0 0 8px #2563eb; }
+.hm-sg-safra .hm-leg-dot      { background: #e8505f; box-shadow: 0 0 8px #e8505f; }
+.hm-sg-special .hm-leg-dot    { background: #d97706; box-shadow: 0 0 8px #d97706; }
+.hm-sg-hometeamns .hm-leg-dot { background: #0d9488; box-shadow: 0 0 8px #0d9488; }
+
+/* ── Navigation arrows ── */
+.hm-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: clamp(16px, 2.5vw, 28px);
+}
+
+.hm-nav-arrow {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--white);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.hm-nav-arrow:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: scale(1.1);
+}
+
+.hm-nav-arrow:active {
+  transform: scale(0.95);
+}
+
+.hm-nav-label {
+  font-family: var(--head);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.hm-nav-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.hm-nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
+}
+
+.hm-nav-dot.active {
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+  transform: scale(1.25);
 }
 
 /* ============================== VISUAL LINEUP ============================== */
@@ -4960,7 +5360,7 @@ footer .f-note {
   height: 10px;
   border-radius: 50%;
   background: var(--green, #2ec27e);
-  color: #BFD7EA;
+  color: #ffffff;
   font-size: 6.5px;
   line-height: 10px;
   text-align: center;
@@ -5196,7 +5596,7 @@ footer .f-note {
   padding: 0 3px;
   border-radius: 5px;
   background: var(--red, #e2001a);
-  color: #BFD7EA;
+  color: #ffffff;
   font-size: 6.5px;
   line-height: 10px;
   font-weight: 700;
@@ -5254,6 +5654,10 @@ footer .f-note {
   box-shadow: 0 0 15px var(--c), 0 0 30px var(--c);
 }
 
+.hm-marker.is-live .hm-dot--sg .hm-core {
+  animation: hm-pulse-live-sg 1.2s ease-in-out infinite alternate;
+}
+
 .hm-marker.is-live .hm-ring,
 .hm-marker.is-live .hm-ring2 {
   border-color: var(--c);
@@ -5261,7 +5665,13 @@ footer .f-note {
   animation: hm-ring-live 2.0s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
-.hm-marker.is-live .hm-ring2 {
+.hm-marker.is-live .hm-dot--sg .hm-ring,
+.hm-marker.is-live .hm-dot--sg .hm-ring2 {
+  animation: hm-ring-live-sg 2.0s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.hm-marker.is-live .hm-ring2,
+.hm-marker.is-live .hm-dot--sg .hm-ring2 {
   animation-delay: 1.0s;
 }
 
@@ -5289,13 +5699,43 @@ footer .f-note {
   }
 }
 
+@keyframes hm-ring-live-sg {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes hm-pulse-live-sg {
+  0% {
+    transform: scale(1.0);
+    opacity: 0.85;
+    box-shadow: 0 0 0 2px rgba(191, 215, 234, 0.45), 0 0 10px var(--c);
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 1;
+    box-shadow: 0 0 0 3px rgba(191, 215, 234, 0.7), 0 0 20px var(--c), 0 0 40px var(--c);
+  }
+}
+
 .hm-live-tag {
   align-self: flex-start;
   font-family: var(--head);
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.14em;
-  color: #BFD7EA;
+  color: #ffffff;
   background: var(--red); /* Red for live */
   padding: 3px 9px;
   border-radius: 5px;
@@ -5390,8 +5830,39 @@ footer .f-note {
   font-size: 18px;
   filter: grayscale(0.2);
   transition: transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+.home-res {
+  justify-content: flex-end;
+}
+.away-res {
+  justify-content: flex-start;
+}
+.so-player {
+  font-size: 13px;
+  font-family: 'Outfit', sans-serif;
+  color: #000000;
+  white-space: nowrap;
+  font-weight: 500;
 }
 
 .so-row:hover .so-res {
   transform: scale(1.1);
+}
+
+/* Fixes for map box and hero map color */
+.hm-wrap, .hm-geo, .hm-map, .host-map-section {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.hero-map .hm-map-shapes,
+.hero-map .hm-map-shapes path,
+.hero-map .hm-map-shapes rect,
+.hero-map .hm-map-shapes polygon {
+  fill: #ffffff !important;
 }
