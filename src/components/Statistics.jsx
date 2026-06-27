@@ -938,13 +938,15 @@ const Statistics = React.memo(function Statistics({ snapshot }) {
                 <span>PENALTY KINGS</span>
               </div>
               {stats.penaltyKings.length > 0
-                ? stats.penaltyKings.map((e, i) => (
-                    <CompactRow
-                      key={`${e.player}|${e.team}`}
-                      entry={e} rank={i + 1}
-                      statKey="penalties" accent={A.purple}
-                    />
-                  ))
+                ? <div className="scroll-list">
+                    {stats.penaltyKings.map((e, i) => (
+                      <CompactRow
+                        key={`${e.player}|${e.team}`}
+                        entry={e} rank={i + 1}
+                        statKey="penalties" accent={A.purple}
+                      />
+                    ))}
+                  </div>
                 : <div className="sp-empty">No penalty goals yet</div>}
             </div>
             <div className="compact-panel">
@@ -953,13 +955,15 @@ const Statistics = React.memo(function Statistics({ snapshot }) {
                 <span>OWN GOALS</span>
               </div>
               {stats.ownGoalsList.length > 0
-                ? stats.ownGoalsList.map((e, i) => (
-                    <CompactRow
-                      key={`${e.player}|${e.team}`}
-                      entry={e} rank={i + 1}
-                      statKey="ownGoals" accent={A.red}
-                    />
-                  ))
+                ? <div className="scroll-list">
+                    {stats.ownGoalsList.map((e, i) => (
+                      <CompactRow
+                        key={`${e.player}|${e.team}`}
+                        entry={e} rank={i + 1}
+                        statKey="ownGoals" accent={A.red}
+                      />
+                    ))}
+                  </div>
                 : <div className="sp-empty">No own goals yet</div>}
             </div>
           </div>
