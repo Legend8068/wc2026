@@ -13,7 +13,16 @@ const CustomCursor = React.memo(function CustomCursor() {
     const dot = dotRef.current;
     if (!dot) return;
 
+    const body = document.body;
+    let lastX = 0;
+    let lastY = 0;
+    let lastWheel = 0;
+
     const onMove = (e) => {
+      lastX = e.clientX;
+      lastY = e.clientY;
+      // A move over content always reclaims control from the native cursor.
+      body.classList.add('custom-cursor-active');
       dot.style.opacity = '1';
       dot.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
     };
@@ -30,18 +39,46 @@ const CustomCursor = React.memo(function CustomCursor() {
       dot.classList.remove('cursor-click');
     };
 
+    const onWheel = () => {
+      lastWheel = performance.now();
+    };
+
+    // A native scrollbar drag scrolls the page but fires NO mousemove events,
+    // so the custom cursor would freeze at the grab point while the real cursor
+    // (which the OS keeps glued to the scrollbar thumb) stays hidden. Detect
+    // that case — a scroll that isn't from the wheel, with the pointer last seen
+    // in the scrollbar gutter — and hand control back to the real cursor. The
+    // next mouse move over content (onMove) restores the custom cursor.
+    const onScroll = () => {
+      if (performance.now() - lastWheel < 150) return; // wheel scroll: keep custom cursor
+      // Distance from the viewport's right/bottom edge — where a scrollbar lives,
+      // whether it reserves layout width (Windows / "always show") or overlays it
+      // (macOS auto-hide). GUTTER is the slack so a quick grab still registers.
+      const GUTTER = 26;
+      const nearRightEdge = lastX >= window.innerWidth - GUTTER;
+      const nearBottomEdge = lastY >= window.innerHeight - GUTTER;
+      if (nearRightEdge || nearBottomEdge) {
+        body.classList.remove('custom-cursor-active'); // reveal the real cursor
+        dot.style.opacity = '0';
+      }
+    };
+
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseleave', onLeave);
     document.addEventListener('mousedown', onDown);
     document.addEventListener('mouseup', onUp);
-    document.body.classList.add('custom-cursor-active');
+    window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
+    body.classList.add('custom-cursor-active');
 
     return () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseleave', onLeave);
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('mouseup', onUp);
-      document.body.classList.remove('custom-cursor-active');
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('scroll', onScroll, { capture: true });
+      body.classList.remove('custom-cursor-active');
     };
   }, []);
 

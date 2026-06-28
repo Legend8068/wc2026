@@ -70,18 +70,11 @@ function parseEvent(ev) {
   const a = NAME_TO_CODE[norm(rawHome)];
   const b = NAME_TO_CODE[norm(rawAway)];
 
-  const isKO = ev.season && ev.season.slug !== 'group-stage';
-
   if (!a || !b) {
-    if (isKO) {
-      // Knockout matches often have placeholder teams in ESPN ("Round of 32 1 Winner").
-      // Allow them through; fetchStates will map them chronologically to M73..M104.
-    } else {
-      // Only warn for matches within the scope of the World Cup feed
-      if (!a) console.warn(`live scoreboard: could not map home team name "${rawHome}" (normalized: "${norm(rawHome)}") to a country code.`);
-      if (!b) console.warn(`live scoreboard: could not map away team name "${rawAway}" (normalized: "${norm(rawAway)}") to a country code.`);
-      return null;
-    }
+    // Only warn for matches within the scope of the World Cup feed
+    if (!a) console.warn(`live scoreboard: could not map home team name "${rawHome}" (normalized: "${norm(rawHome)}") to a country code.`);
+    if (!b) console.warn(`live scoreboard: could not map away team name "${rawAway}" (normalized: "${norm(rawAway)}") to a country code.`);
+    return null;
   }
 
   const type = (ev.status && ev.status.type) || {};
@@ -444,32 +437,18 @@ export async function fetchStates() {
   const events = json.events || [];
   const states = {};
   let mapped = 0;
-
-  // ESPN knockout events occur in strict chronological order matching M73..M104.
-  // Extract and sort them so we can map them reliably regardless of team names.
-  const koEvents = events
-    .filter(ev => ev.season && ev.season.slug !== 'group-stage')
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-  const koMap = {};
-  koEvents.forEach((ev, i) => {
-    koMap[ev.id] = `M${73 + i}`;
-  });
-
   for (const ev of events) {
     const p = parseEvent(ev);
     if (!p) continue;
     const fxId = PAIR_TO_FIXTURE[`${p.a}|${p.b}`];
-    const koId = koMap[ev.id];
-
     if (fxId && !(states[fxId] && states[fxId].status === 'ft')) {
       // group fixtures can repeat pairs across the feed window only
       // erroneously; first FT result wins. Line-ups are fetched lazily by the
       // UI (fetchLineup) when a card is expanded — for live, HT and FT matches —
       // so polls stay cheap and every opened match shows real ESPN data.
       states[fxId] = p.st;
-    } else if (koId) {
-      states[koId] = p.st; // knockout — resolved chronologically (M73..M104)
-      if (p.a && p.b) states[`${p.a}|${p.b}`] = p.st; // fallback / redundancy
+    } else if (!fxId) {
+      states[`${p.a}|${p.b}`] = p.st; // knockout — resolved by pair
     }
     mapped++;
   }

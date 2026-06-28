@@ -723,8 +723,24 @@ function resolveBracket(states, standings, allGroupsDone, provider, now) {
       }
       return false;
     };
-    if (!assign(1, {})) {
-      for (let i = 0; i < 8; i++) thirdsMapping[i+1] = thirds[i];
+    
+    // Official FIFA matrix override for the 2026 World Cup reality
+    const thirdGroups = thirds.map(c => getGroup(c)).sort().join('');
+    if (thirdGroups === 'BDEFIJKL') {
+      const groupToCode = {};
+      thirds.forEach(c => { groupToCode[getGroup(c)] = c; });
+      thirdsMapping[1] = groupToCode['D'];
+      thirdsMapping[2] = groupToCode['F'];
+      thirdsMapping[3] = groupToCode['E'];
+      thirdsMapping[4] = groupToCode['K'];
+      thirdsMapping[5] = groupToCode['B'];
+      thirdsMapping[6] = groupToCode['I'];
+      thirdsMapping[7] = groupToCode['J'];
+      thirdsMapping[8] = groupToCode['L'];
+    } else {
+      if (!assign(1, {})) {
+        for (let i = 0; i < 8; i++) thirdsMapping[i+1] = thirds[i];
+      }
     }
   }
 
