@@ -14,12 +14,15 @@
      "Jordan 1-3 Argentina | Group J | FIFA World Cup 2026™ Highlights"
      and sometimes without the score:
      "Panama vs England | Group L | FIFA World Cup 2026™ Highlights"
-   • We search ONLY this channel (channelId filter) so every result is
-     from the official broadcaster — never another channel's upload.
-   • The channel also posts analysis / reaction / interview clips that
-     name both teams, so a result must ALSO contain the word
-     "Highlights" and name BOTH teams (score "X-Y" or "vs", either
-     order) before we surface it.
+   • We read this channel's UPLOADS directly via playlistItems.list
+     (not search.list). The Data API's in-channel `q` search is wildly
+     incomplete — it returned 0–2 items for most matches and missed the
+     actual highlight uploads — whereas the uploads playlist is complete,
+     immediately available (no search-index lag) and ~100× cheaper on
+     quota (1 unit/page vs 100/search). We scan newest-first and keep
+     only a video that is a HIGHLIGHTS upload naming BOTH teams (score
+     "X-Y" or "vs", either order); the "Highlights" requirement filters
+     out the channel's analysis / reaction / interview clips.
    • Optional sa/sb (this match's final score) are used as a tiebreaker
      so a repeat matchup (group + knockout) returns the correct leg.
 
@@ -32,6 +35,12 @@
 // Mediacorp Sports — official Singapore broadcaster for FIFA WC 2026.
 // Channel ID resolved from the canonical URL of youtube.com/@SportsMediacorp.
 const MEDIACORP_CHANNEL_ID = 'UCCc3h5l7RvGzCAbZ1ApxOYw';
+// A channel's uploads playlist is its ID with the "UC" prefix swapped for "UU".
+const MEDIACORP_UPLOADS = `UU${MEDIACORP_CHANNEL_ID.slice(2)}`;
+// How many 50-video pages of uploads to scan before giving up. The channel
+// posts several clips per match day, so this comfortably covers recent matches
+// while bounding latency/quota when a match has no highlight upload yet.
+const MAX_UPLOAD_PAGES = 10;
 
 // Words that are never part of a team name — ignored in token matching.
 const STOP = new Set([
@@ -170,54 +179,57 @@ export default async function handler(req, res) {
   if (!key) return res.status(200).json({ videoId: null, reason: 'no-key' });
   if (!a || !b) return res.status(200).json({ videoId: null, reason: 'bad-request' });
 
-  const url = new URL('https://www.googleapis.com/youtube/v3/search');
-  url.searchParams.set('part', 'snippet');
-  url.searchParams.set('q', `${a} ${b} World Cup 2026 Highlights`);
-  url.searchParams.set('type', 'video');
-  url.searchParams.set('channelId', MEDIACORP_CHANNEL_ID);
-  url.searchParams.set('videoEmbeddable', 'true');
-  url.searchParams.set('maxResults', '15');
-  url.searchParams.set('order', 'relevance');
-  url.searchParams.set('key', key);
-
   try {
-    const r = await fetch(url);
-    const data = await r.json().catch(() => null);
+    // Scan the channel's uploads playlist newest-first. `fallback` holds the
+    // newest highlights video that names both teams; if the match has a known
+    // score we keep scanning for the leg whose title score matches exactly
+    // (a group game vs a later rematch) and only fall back when none does.
+    let fallback = null;
+    const sampleTitles = []; // highlight titles seen, for no-match debugging
+    let pageToken = '';
+    let scanned = 0;
 
-    if (!r.ok) {
-      const detail = data?.error?.message || `http-${r.status}`;
-      return res.status(200).json({ videoId: null, reason: `yt-${r.status}`, detail });
+    for (let page = 0; page < MAX_UPLOAD_PAGES; page++) {
+      const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+      url.searchParams.set('part', 'snippet');
+      url.searchParams.set('playlistId', MEDIACORP_UPLOADS);
+      url.searchParams.set('maxResults', '50');
+      if (pageToken) url.searchParams.set('pageToken', pageToken);
+      url.searchParams.set('key', key);
+
+      const r = await fetch(url);
+      const data = await r.json().catch(() => null);
+      if (!r.ok) {
+        const detail = data?.error?.message || `http-${r.status}`;
+        return res.status(200).json({ videoId: null, reason: `yt-${r.status}`, detail });
+      }
+
+      for (const it of data?.items || []) {
+        const title = it?.snippet?.title || '';
+        const videoId = it?.snippet?.resourceId?.videoId;
+        // Skip private/deleted placeholders (no playable videoId).
+        if (!videoId || title === 'Private video' || title === 'Deleted video') continue;
+        scanned++;
+        if (sampleTitles.length < 8 && /highlights?/i.test(title)) sampleTitles.push(title);
+        if (!titleMatchesPair(title, a, b)) continue;
+
+        if (wantScore) {
+          const s = titleScoreFor(title, a, b);
+          if (s && s[0] === wantScore[0] && s[1] === wantScore[1]) {
+            return res.status(200).json({ videoId, title }); // exact leg — done
+          }
+          if (!fallback) fallback = { videoId, title }; // remember newest match
+        } else {
+          return res.status(200).json({ videoId, title }); // newest match — done
+        }
+      }
+
+      pageToken = data?.nextPageToken || '';
+      if (!pageToken) break;
     }
 
-    const items = (data?.items || []).filter((it) => it?.id?.videoId);
-    if (items.length === 0) {
-      return res.status(200).json({ videoId: null, reason: 'no-results' });
-    }
-
-    // Every candidate is from Mediacorp (channelId filter) and is a real
-    // highlights video naming both teams. Keep relevance order as the default.
-    const candidates = items.filter((it) => titleMatchesPair(it.snippet?.title, a, b));
-    if (candidates.length === 0) {
-      return res.status(200).json({
-        videoId: null,
-        reason: 'no-match',
-        detail: items.slice(0, 8).map((it) => it.snippet?.title).filter(Boolean),
-      });
-    }
-
-    // Tiebreaker: when this match has a known score, prefer the candidate whose
-    // title score matches it — disambiguating a group game from a later rematch.
-    // Falls back to the most relevant candidate when no title carries a score.
-    let pick = candidates[0];
-    if (wantScore) {
-      const exact = candidates.find((it) => {
-        const s = titleScoreFor(it.snippet?.title, a, b);
-        return s && s[0] === wantScore[0] && s[1] === wantScore[1];
-      });
-      if (exact) pick = exact;
-    }
-
-    return res.status(200).json({ videoId: pick.id.videoId, title: pick.snippet?.title || null });
+    if (fallback) return res.status(200).json(fallback);
+    return res.status(200).json({ videoId: null, reason: 'no-match', detail: { scanned, sampleTitles } });
   } catch (err) {
     return res.status(200).json({ videoId: null, reason: 'fetch-failed', detail: String(err?.message || err) });
   }
