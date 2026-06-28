@@ -14,17 +14,21 @@
      "Jordan 1-3 Argentina | Group J | FIFA World Cup 2026™ Highlights"
      and sometimes without the score:
      "Panama vs England | Group L | FIFA World Cup 2026™ Highlights"
-   • We read this channel's UPLOADS directly via playlistItems.list
-     (not search.list). The Data API's in-channel `q` search is wildly
-     incomplete — it returned 0–2 items for most matches and missed the
-     actual highlight uploads — whereas the uploads playlist is complete,
-     immediately available (no search-index lag) and ~100× cheaper on
-     quota (1 unit/page vs 100/search). We scan newest-first and keep
-     only a video that is a HIGHLIGHTS upload naming BOTH teams (score
-     "X-Y" or "vs", either order); the "Highlights" requirement filters
-     out the channel's analysis / reaction / interview clips.
-   • Optional sa/sb (this match's final score) are used as a tiebreaker
-     so a repeat matchup (group + knockout) returns the correct leg.
+   • We read playlists via playlistItems.list (NOT search.list — the Data
+     API's in-channel `q` search is wildly incomplete: 0–2 items for most
+     matches, missing the actual highlights). Primary source is Mediacorp's
+     dedicated "Highlights | FIFA World Cup 2026™" playlist — the whole
+     tournament's match highlights in a few hundred videos, so even early
+     group games are reachable in a few pages (the firehose uploads
+     playlist buries them as the tournament grows). The uploads playlist is
+     a fallback for a just-finished match not yet added to the highlights
+     playlist. playlistItems is ~100× cheaper than search (1 unit/page).
+   • We keep only a HIGHLIGHTS video naming BOTH teams (score "X-Y" or
+     "vs", either order; alias/accents aware) and prefer a FULL match cut
+     over a "1st Half" partial. The "Highlights" requirement excludes the
+     channel's analysis / reaction / interview clips.
+   • Optional sa/sb (this match's final score) pick the right leg of a
+     repeat matchup (group + knockout) and break ties between cuts.
 
    On success: { videoId, title }
    On any failure: { videoId: null, reason, detail? } with a 200.
@@ -35,18 +39,28 @@
 // Mediacorp Sports — official Singapore broadcaster for FIFA WC 2026.
 // Channel ID resolved from the canonical URL of youtube.com/@SportsMediacorp.
 const MEDIACORP_CHANNEL_ID = 'UCCc3h5l7RvGzCAbZ1ApxOYw';
+// Mediacorp's dedicated "Highlights | FIFA World Cup 2026™" playlist. This is
+// the PRIMARY source: it holds every match's highlights for the whole tournament
+// (a few hundred videos — full "vs" + score cuts and the odd 1st-half clip) with
+// none of the channel's reactions/interviews. Scanning it covers even early
+// group-stage matches in a handful of pages, which the firehose uploads playlist
+// cannot (those highlights sink past any sane page cap as the tournament grows).
+const HIGHLIGHTS_PLAYLIST = 'PLMTqHyyQlproK4b2zBniRdiFUNcO2qW_-';
 // A channel's uploads playlist is its ID with the "UC" prefix swapped for "UU".
+// Used only as a fallback for a just-finished match not yet added to the
+// highlights playlist; scanned newest-first, so a shallow cap suffices.
 const MEDIACORP_UPLOADS = `UU${MEDIACORP_CHANNEL_ID.slice(2)}`;
-// How many 50-video pages of uploads to scan before giving up. The channel
-// posts several clips per match day, so this comfortably covers recent matches
-// while bounding latency/quota when a match has no highlight upload yet.
-const MAX_UPLOAD_PAGES = 10;
+const MAX_HIGHLIGHT_PAGES = 12; // playlist is ~5 pages today; headroom for growth
+const MAX_UPLOAD_PAGES = 6;     // fallback: only the most recent uploads
 
 // Words that are never part of a team name — ignored in token matching.
+// NB: directional qualifiers (south/north/…) MUST be here, otherwise the token
+// net conflates e.g. "South Africa" with "South Korea" (they share "south").
 const STOP = new Set([
   'fifa', 'world', 'cup', 'highlights', 'highlight', 'group', 'match', 'final',
   'finals', 'round', 'quarter', 'quarterfinal', 'semi', 'semifinal', 'women',
   'womens', 'mens', 'football', 'soccer', 'full', 'extended', 'and', 'the',
+  'south', 'north', 'east', 'west', 'republic', 'first', 'second', 'half', 'time',
 ]);
 
 // Teams our data spells differently from broadcast convention.
@@ -94,6 +108,10 @@ function sameTeam(x, y) {
 // shootout score in parens ("(4-2)") is ignored for the goals reading.
 const SCORE_SPLIT = /\s*\d+\s*[-\u2013\u2014]\s*\d+\s*/;
 const SCORE_FIND = /(\d+)\s*[-\u2013\u2014]\s*(\d+)/;
+// Strip a trailing " - <descriptor>" a team name can pick up when a clip's
+// qualifier sits in the same segment as the teams, e.g. the second team in
+// "Turkiye vs USA - 1st Half Highlights" parses as "USA - 1st Half Highlights".
+const cleanTeam = (s) => (s || '').replace(/\s+[-\u2013\u2014]\s+.*$/, '').trim();
 function extractMatch(title) {
   const segs = String(title || '').split('|');
   for (const seg of segs) {
@@ -101,14 +119,14 @@ function extractMatch(title) {
     if (!m) continue;
     const parts = seg
       .split(SCORE_SPLIT)
-      .map((s) => s.replace(/[()]/g, ' ').trim())
+      .map((s) => cleanTeam(s.replace(/[()]/g, ' ')))
       .filter(Boolean);
     if (parts.length >= 2) {
       return { teams: [parts[0], parts[parts.length - 1]], goals: [Number(m[1]), Number(m[2])] };
     }
   }
   for (const seg of segs) {
-    const parts = seg.split(/\s+vs?\.?\s+/i).map((s) => s.trim()).filter(Boolean);
+    const parts = seg.split(/\s+vs?\.?\s+/i).map((s) => cleanTeam(s)).filter(Boolean);
     if (parts.length >= 2) return { teams: [parts[0], parts[parts.length - 1]], goals: null };
   }
   return null;
@@ -159,8 +177,66 @@ function titleScoreFor(title, a, b) {
   return null;
 }
 
+// Rank a candidate highlight for our match (higher = better): a FULL match cut
+// beats a "1st Half" partial, a score-titled cut beats a scoreless one, and —
+// when we know the result — the leg whose title score matches wins outright.
+// Lets the scan keep the best of a match's several variants in the playlist.
+function rankCandidate(title, a, b, wantScore) {
+  const isHalf = /\bhalf\b/i.test(title);
+  const s = titleScoreFor(title, a, b);
+  let r = 0;
+  if (!isHalf) r += 4;
+  if (s) r += 1;
+  if (wantScore && s && s[0] === wantScore[0] && s[1] === wantScore[1]) r += 8;
+  return r;
+}
+const maxRank = (wantScore) => (wantScore ? 13 : 5);
+
+// Scan a playlist (50 per page) for the best highlight of a vs b. Returns
+// { best, scanned, samples, error }. Stops early once a candidate reaches the
+// best achievable rank, so a perfect match doesn't read the whole playlist.
+async function scanForHighlight(playlistId, a, b, wantScore, key, maxPages) {
+  let best = null;
+  let bestRank = -1;
+  let scanned = 0;
+  let pageToken = '';
+  const samples = [];
+
+  for (let page = 0; page < maxPages; page++) {
+    const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+    url.searchParams.set('part', 'snippet');
+    url.searchParams.set('playlistId', playlistId);
+    url.searchParams.set('maxResults', '50');
+    if (pageToken) url.searchParams.set('pageToken', pageToken);
+    url.searchParams.set('key', key);
+
+    const r = await fetch(url);
+    const data = await r.json().catch(() => null);
+    if (!r.ok) {
+      return { best, scanned, samples, error: { reason: `yt-${r.status}`, detail: data?.error?.message || `http-${r.status}` } };
+    }
+
+    for (const it of data?.items || []) {
+      const title = it?.snippet?.title || '';
+      const videoId = it?.snippet?.resourceId?.videoId;
+      // Skip private/deleted placeholders (no playable videoId).
+      if (!videoId || title === 'Private video' || title === 'Deleted video') continue;
+      scanned++;
+      if (samples.length < 8 && /highlights?/i.test(title)) samples.push(title);
+      if (!titleMatchesPair(title, a, b)) continue;
+      const rank = rankCandidate(title, a, b, wantScore);
+      if (rank > bestRank) { bestRank = rank; best = { videoId, title }; }
+      if (bestRank >= maxRank(wantScore)) return { best, scanned, samples };
+    }
+
+    pageToken = data?.nextPageToken || '';
+    if (!pageToken) break;
+  }
+  return { best, scanned, samples };
+}
+
 // Exported for unit testing; the Vercel runtime only uses the default export.
-export { sameTeam, extractTeams, extractMatch, titleMatchesPair, titleScoreFor };
+export { sameTeam, extractTeams, extractMatch, titleMatchesPair, titleScoreFor, rankCandidate };
 
 export default async function handler(req, res) {
   const a = (req.query?.a || '').toString().trim();
@@ -180,56 +256,22 @@ export default async function handler(req, res) {
   if (!a || !b) return res.status(200).json({ videoId: null, reason: 'bad-request' });
 
   try {
-    // Scan the channel's uploads playlist newest-first. `fallback` holds the
-    // newest highlights video that names both teams; if the match has a known
-    // score we keep scanning for the leg whose title score matches exactly
-    // (a group game vs a later rematch) and only fall back when none does.
-    let fallback = null;
-    const sampleTitles = []; // highlight titles seen, for no-match debugging
-    let pageToken = '';
-    let scanned = 0;
+    // Primary: the dedicated highlights playlist (complete, focused).
+    const primary = await scanForHighlight(HIGHLIGHTS_PLAYLIST, a, b, wantScore, key, MAX_HIGHLIGHT_PAGES);
+    if (primary.best) return res.status(200).json(primary.best);
 
-    for (let page = 0; page < MAX_UPLOAD_PAGES; page++) {
-      const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
-      url.searchParams.set('part', 'snippet');
-      url.searchParams.set('playlistId', MEDIACORP_UPLOADS);
-      url.searchParams.set('maxResults', '50');
-      if (pageToken) url.searchParams.set('pageToken', pageToken);
-      url.searchParams.set('key', key);
+    // Fallback: most recent uploads, for a match not yet added to the playlist
+    // (or if the playlist id ever goes stale → it 404s and we still find it here).
+    const fallback = await scanForHighlight(MEDIACORP_UPLOADS, a, b, wantScore, key, MAX_UPLOAD_PAGES);
+    if (fallback.best) return res.status(200).json(fallback.best);
 
-      const r = await fetch(url);
-      const data = await r.json().catch(() => null);
-      if (!r.ok) {
-        const detail = data?.error?.message || `http-${r.status}`;
-        return res.status(200).json({ videoId: null, reason: `yt-${r.status}`, detail });
-      }
-
-      for (const it of data?.items || []) {
-        const title = it?.snippet?.title || '';
-        const videoId = it?.snippet?.resourceId?.videoId;
-        // Skip private/deleted placeholders (no playable videoId).
-        if (!videoId || title === 'Private video' || title === 'Deleted video') continue;
-        scanned++;
-        if (sampleTitles.length < 8 && /highlights?/i.test(title)) sampleTitles.push(title);
-        if (!titleMatchesPair(title, a, b)) continue;
-
-        if (wantScore) {
-          const s = titleScoreFor(title, a, b);
-          if (s && s[0] === wantScore[0] && s[1] === wantScore[1]) {
-            return res.status(200).json({ videoId, title }); // exact leg — done
-          }
-          if (!fallback) fallback = { videoId, title }; // remember newest match
-        } else {
-          return res.status(200).json({ videoId, title }); // newest match — done
-        }
-      }
-
-      pageToken = data?.nextPageToken || '';
-      if (!pageToken) break;
-    }
-
-    if (fallback) return res.status(200).json(fallback);
-    return res.status(200).json({ videoId: null, reason: 'no-match', detail: { scanned, sampleTitles } });
+    const error = primary.error || fallback.error;
+    if (error) return res.status(200).json({ videoId: null, ...error });
+    return res.status(200).json({
+      videoId: null,
+      reason: 'no-match',
+      detail: { scanned: primary.scanned + fallback.scanned, sampleTitles: primary.samples },
+    });
   } catch (err) {
     return res.status(200).json({ videoId: null, reason: 'fetch-failed', detail: String(err?.message || err) });
   }
