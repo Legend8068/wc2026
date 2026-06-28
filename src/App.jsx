@@ -188,6 +188,47 @@ export default function App() {
     }
   }, [snapshot?.champion]);
 
+  // Seamless native scroll chaining
+  useEffect(() => {
+    const activeChains = new Map();
+
+    const handleWheel = (e) => {
+      let el = e.target;
+      while (el && el !== document.body && el !== document.documentElement) {
+        if (el.scrollHeight > el.clientHeight) {
+          const style = window.getComputedStyle(el);
+          if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+            const atTop = el.scrollTop <= 0;
+            const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+            
+            if ((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)) {
+              // Hit the scroll boundary. Temporarily disable pointer-events so 
+              // the trackpad's continuous scroll momentum targets the parent (body) natively.
+              el.style.pointerEvents = 'none';
+              
+              if (activeChains.has(el)) clearTimeout(activeChains.get(el));
+              activeChains.set(el, setTimeout(() => {
+                el.style.pointerEvents = '';
+                activeChains.delete(el);
+              }, 150));
+            }
+            return;
+          }
+        }
+        el = el.parentElement;
+      }
+    };
+    
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      activeChains.forEach((timer, el) => {
+        clearTimeout(timer);
+        el.style.pointerEvents = '';
+      });
+    };
+  }, []);
+
   return (
     <>
       {loading && <LoadingScreen onDone={handleLoaderDone} />}

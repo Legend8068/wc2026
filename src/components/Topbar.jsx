@@ -11,6 +11,37 @@ function fmtClock(ms) {
 
 export default function Topbar({ now, mode, feedOk, onToggleMode, demoPlaying, onStepDemo, onTogglePlay }) {
   const isDemo = mode === 'demo';
+  const [activeSection, setActiveSection] = React.useState('live');
+
+  React.useEffect(() => {
+    const sections = ['live', 'bracket', 'groups', 'statistics', 'venues'];
+    const elements = sections.map(id => document.getElementById(id)).filter(Boolean);
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    }, {
+      rootMargin: '-30% 0px -50% 0px'
+    });
+
+    elements.forEach(el => observer.observe(el));
+
+    // Also listen to hash changes or manual scrolls to be precise
+    const handleScroll = () => {
+      if (window.scrollY === 0) {
+        setActiveSection('live');
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      elements.forEach(el => observer.unobserve(el));
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   let badgeText = 'LIVE';
   let badgeTitle = '';
@@ -45,11 +76,11 @@ export default function Topbar({ now, mode, feedOk, onToggleMode, demoPlaying, o
         <small style={{ width: '100%' }}>USA · CANADA · MEXICO</small>
       </div>
       <div className="nav-links">
-        <a href="#live">LIVE</a>
-        <a href="#bracket">BRACKET</a>
-        <a href="#groups">GROUPS</a>
-        <a href="#statistics">STATS</a>
-        <a href="#venues">VENUES</a>
+        <a href="#live" className={activeSection === 'live' ? 'active' : ''}>LIVE</a>
+        <a href="#bracket" className={activeSection === 'bracket' ? 'active' : ''}>BRACKET</a>
+        <a href="#groups" className={activeSection === 'groups' ? 'active' : ''}>GROUPS</a>
+        <a href="#statistics" className={activeSection === 'statistics' ? 'active' : ''}>STATS</a>
+        <a href="#venues" className={activeSection === 'venues' ? 'active' : ''}>VENUES</a>
       </div>
       <div className="nav-status">
         <span id="clock">{fmtClock(now)}</span>

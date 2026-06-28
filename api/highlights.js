@@ -1,26 +1,21 @@
 /* ============================================================
    WC2026 — Match highlights lookup (Vercel serverless function)
 
-   Searches YouTube for a match's highlights and returns a single
-   embeddable videoId. The YouTube Data API v3 key is held
-   server-side here so it never ships to the browser — set it in
-   your Vercel project as the YOUTUBE_API_KEY environment variable.
+   Searches the Mediacorp Sports YouTube channel for a match's
+   highlights and returns a single embeddable videoId. The YouTube
+   Data API v3 key is held server-side so it never ships to the
+   browser — set it in your Vercel project as the YOUTUBE_API_KEY
+   environment variable.
 
-   Sourcing (decided with the user):
-   • Search ALL of YouTube — Mediacorp's per-match highlights live
-     on mewatch / TikTok / IG / FB, not reliably on YouTube, so a
-     single-channel restriction returned nothing for most matches.
-   • Skip FIFA's own channel — FIFA content-blocks third-party
-     embedding ("This video contains content from FIFA…"), so its
-     clips can never play in our iframe.
+   Sourcing:
+   • Mediacorp Sports (@SportsMediacorp) is the official
+     Singapore broadcaster for FIFA World Cup 2026™. Their per-match
+     highlight titles follow a consistent pattern, e.g.:
+     "Jordan 1-3 Argentina | Group J | FIFA World Cup 2026™ Highlights"
+   • We search ONLY this channel (channelId filter) to guarantee
+     every result is from the official broadcaster.
    • Only return a video whose TITLE names BOTH teams (in either
-     order) so we never surface a wrong match. No relevance
-     fallback — a wrong video is worse than none.
-
-   Embeds that are still blocked at playback (Content-ID can block
-   embedding even on broadcaster uploads) are handled on the client
-   via the IFrame Player API's onError → thumbnail + "Watch on
-   YouTube" link.
+     order) so we never surface a wrong match.
 
    On success: { videoId, title }
    On any failure: { videoId: null, reason, detail? } with a 200.
@@ -28,25 +23,8 @@
    to inspect the reason / candidate titles.
    ============================================================ */
 
-// Sources we never use:
-//  • FIFA — content-blocks third-party embedding ("video contains content
-//    from FIFA, who has blocked it…"), so its clips can't play in our iframe.
-//  • FOX Soccer / FOX Sports — their WC highlights are geo-restricted (US),
-//    so they won't play for most of our (Singapore-based) audience.
-const BLOCKED_CHANNEL_IDS = new Set([
-  'UCpcTrCXblq78GZrTUTLWeBw', // FIFA
-]);
-// FOX has several channels; match by name + the "| FOX Sports" title suffix
-// they use, rather than guessing channel ids.
-const BLOCKED_SOURCE_RE = /fox\s*(soccer|sports)/i;
-
-function isBlockedSource(it) {
-  const s = it?.snippet || {};
-  if (BLOCKED_CHANNEL_IDS.has(s.channelId)) return true;
-  if (BLOCKED_SOURCE_RE.test(s.channelTitle || '')) return true;
-  if (BLOCKED_SOURCE_RE.test(s.title || '')) return true;
-  return false;
-}
+// Mediacorp Sports — official Singapore broadcaster for FIFA WC 2026
+const MEDIACORP_CHANNEL_ID = 'UCMTqHyyQlprpDErBdIZ0OgU';
 
 // Words that are never part of a team name — ignored in token matching.
 const STOP = new Set([
@@ -71,11 +49,11 @@ const ALIAS_GROUPS = [
 
 // "Côte d'Ivoire" -> "cotedivoire"  (letters only, accents stripped)
 const norm = (s) =>
-  (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');
+  (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
 
 // significant words (>= 4 letters, not stop-words)
 const tokens = (s) =>
-  (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z]+/g, ' ').split(' ')
     .filter((w) => w.length >= 4 && !STOP.has(w));
 
@@ -95,12 +73,11 @@ function sameTeam(x, y) {
 //   "Panama 0-1 Croatia | Group L | …"   -> ["Panama", "Croatia"]
 //   "Spain 1-1 (4-2) Italy | …"          -> ["Spain", "Italy"]
 //   "… | Netherlands v Sweden | …"       -> ["Netherlands", "Sweden"]
-//   "Netherlands vs Sweden Extended …"   -> ["Netherlands", "Sweden Extended …"]
 function extractTeams(title) {
   const segs = String(title || '').split('|');
   for (const seg of segs) {
     const parts = seg
-      .split(/\s*\d+\s*[-–—]\s*\d+\s*/)
+      .split(/\s*\d+\s*[-\u2013\u2014]\s*\d+\s*/)
       .map((s) => s.replace(/[()]/g, ' ').trim())
       .filter(Boolean);
     if (parts.length >= 2) return [parts[0], parts[parts.length - 1]];
@@ -137,7 +114,7 @@ function titleMatchesPair(title, a, b) {
 }
 
 // Exported for unit testing; the Vercel runtime only uses the default export.
-export { sameTeam, extractTeams, titleMatchesPair, isBlockedSource };
+export { sameTeam, extractTeams, titleMatchesPair };
 
 export default async function handler(req, res) {
   const a = (req.query?.a || '').toString().trim();
@@ -152,10 +129,11 @@ export default async function handler(req, res) {
 
   const url = new URL('https://www.googleapis.com/youtube/v3/search');
   url.searchParams.set('part', 'snippet');
-  url.searchParams.set('q', `${a} ${b} FIFA World Cup 2026 highlights`);
+  url.searchParams.set('q', `${a} ${b} World Cup 2026 Highlights`);
   url.searchParams.set('type', 'video');
+  url.searchParams.set('channelId', MEDIACORP_CHANNEL_ID);
   url.searchParams.set('videoEmbeddable', 'true');
-  url.searchParams.set('maxResults', '15');
+  url.searchParams.set('maxResults', '10');
   url.searchParams.set('order', 'relevance');
   url.searchParams.set('key', key);
 
@@ -168,11 +146,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ videoId: null, reason: `yt-${r.status}`, detail });
     }
 
-    // Drop blocked sources (FIFA embed-blocked, FOX geo-restricted) and
-    // anything without a videoId.
-    const items = (data?.items || []).filter(
-      (it) => it?.id?.videoId && !isBlockedSource(it)
-    );
+    const items = (data?.items || []).filter((it) => it?.id?.videoId);
     if (items.length === 0) {
       return res.status(200).json({ videoId: null, reason: 'no-results' });
     }

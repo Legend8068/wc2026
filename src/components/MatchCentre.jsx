@@ -198,8 +198,8 @@ function YouTubeEmbed({ videoId, teamAName, teamBName }) {
 
 function MatchHighlights({ teamAName, teamBName }) {
   const key = `${teamAName}__${teamBName}`;
-  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(
-    `${teamAName} ${teamBName} FIFA World Cup 2026 highlights`
+  const searchUrl = `https://www.youtube.com/@SportsMediacorp/search?query=${encodeURIComponent(
+    `${teamAName} ${teamBName} highlights`
   )}`;
 
   const cached = _highlightCache.get(key);

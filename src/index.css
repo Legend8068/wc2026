@@ -164,6 +164,12 @@ a {
 .nav-links a:nth-child(4):hover { color: var(--gold); background: rgba(245, 197, 66, 0.18); }
 .nav-links a:nth-child(5):hover { color: var(--green); background: rgba(0, 200, 83, 0.18); }
 
+.nav-links a.active:nth-child(1) { color: var(--red-light); background: rgba(226, 0, 26, 0.16); }
+.nav-links a.active:nth-child(2) { color: var(--blue); background: rgba(51, 102, 255, 0.18); }
+.nav-links a.active:nth-child(3) { color: var(--green); background: rgba(0, 200, 83, 0.18); }
+.nav-links a.active:nth-child(4) { color: var(--gold); background: rgba(245, 197, 66, 0.18); }
+.nav-links a.active:nth-child(5) { color: var(--green); background: rgba(0, 200, 83, 0.18); }
+
 .nav-status {
   display: flex;
   align-items: center;
@@ -2488,7 +2494,6 @@ section {
 
 .thirds-body {
   padding: 14px 16px 16px;
-  overflow-x: auto;
 }
 
 .thirds-grid-head,
@@ -2497,7 +2502,6 @@ section {
   grid-template-columns: 38px 54px minmax(170px, 1fr) 32px 32px 32px 32px 36px 42px;
   gap: 6px;
   align-items: center;
-  min-width: 680px;
 }
 
 .thirds-grid-head {
@@ -3080,14 +3084,21 @@ section {
   transition: all 0.25s cubic-bezier(0.2, 1, 0.3, 1);
 }
 
-.st-tab svg {
-  flex: none;
-}
-
 .st-tab:hover {
   border-color: rgba(191, 215, 234, 0.25);
   color: var(--white);
   background: rgba(191, 215, 234, 0.08);
+}
+
+.st-tab-icon {
+  display: flex;
+  opacity: 0.7;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.st-tab:hover .st-tab-icon {
+  opacity: 1;
+  transform: scale(1.15) rotate(-3deg);
 }
 
 .st-tab--on,
@@ -3096,6 +3107,10 @@ section {
   border-color: var(--blue);
   color: var(--white);
   box-shadow: 0 4px 16px rgba(51, 102, 255, 0.35);
+}
+
+.st-tab--on .st-tab-icon {
+  opacity: 1;
 }
 
 /* ── Card shapes ── */
@@ -3420,8 +3435,10 @@ section {
 .compact-panel {
   background: var(--paper);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 6px 28px rgba(0, 0, 0, 0.18);
+  padding-bottom: 16px;
+  isolation: isolate;
 }
 
 .compact-panel--wide {
@@ -3434,6 +3451,7 @@ section {
   gap: 10px;
   padding: 14px 18px 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   font-family: var(--head);
   font-weight: 700;
   font-size: 13px;
@@ -3450,19 +3468,25 @@ section {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 18px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-  transition: background 0.2s;
-}
-
-.cmp-row:last-child {
-  border-bottom: none;
+  padding: 10px 12px;
+  margin: 4px 12px;
+  border-radius: var(--radius-md);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .cmp-row:hover {
-  background: rgba(0, 0, 0, 0.02);
+  background: var(--white);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  z-index: 2;
+  position: relative;
 }
 
+.cmp-row:hover .cmp-val {
+  color: var(--gold);
+  transform: scale(1.1);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
 
 .cmp-flag {
   width: 28px;
@@ -3506,21 +3530,36 @@ section {
 .scroll-list {
   max-height: 312px;
   overflow-y: auto;
+  padding: 4px 8px 16px 4px;
+  margin: 0 8px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+  scrollbar-color: rgba(26, 39, 68, 0.25) rgba(0, 0, 0, 0.05);
+}
+
+.compact-panel--wide .scroll-list {
+  max-height: 270px;
+}
+
+.st-side-panels .scroll-list {
+  max-height: 240px;
 }
 
 .scroll-list::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .scroll-list::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-sm);
 }
 
 .scroll-list::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 2px;
+  background: rgba(26, 39, 68, 0.25);
+  border-radius: var(--radius-sm);
+}
+
+.scroll-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(26, 39, 68, 0.4);
 }
 
 /* ── Side Panels (Penalty + Own Goals) ── */
@@ -3548,16 +3587,24 @@ section {
   gap: 6px;
   padding: 14px 14px 12px;
   border-radius: var(--radius-md);
-  background: rgba(0, 0, 0, 0.02);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: var(--paper);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   min-width: 110px;
   max-width: 140px;
   flex: 1 1 110px;
   position: relative;
-  transition: transform 0.3s cubic-bezier(0.2, 1, 0.3, 1), box-shadow 0.3s;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   transform: rotate(var(--cw-rot, 0deg));
   animation: cwDeal 0.4s cubic-bezier(0.2, 1, 0.3, 1) backwards;
   animation-delay: var(--cw-delay, 0s);
+  will-change: transform;
+}
+
+.card-wall:hover .cw-card:not(:hover) {
+  opacity: 0.5;
+  filter: grayscale(40%);
+  transform: scale(0.95);
 }
 
 @keyframes cwDeal {
@@ -3573,9 +3620,11 @@ section {
 }
 
 .cw-card:hover {
-  transform: rotate(0deg) translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  z-index: 2;
+  transform: scale(1.15) rotate(0deg) !important;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  cursor: pointer;
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .cw-card--yellow {
@@ -3832,6 +3881,11 @@ section {
   font-size: 14px;
   color: var(--white);
   white-space: nowrap;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tr-card:hover .radial-ring-val {
+  transform: translate(-50%, -50%) scale(1.2);
 }
 
 .tr-info {

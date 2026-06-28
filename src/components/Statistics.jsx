@@ -582,9 +582,9 @@ function CompactRow({ entry, rank, statKey, accent }) {
   const team = D.TEAMS[entry.team];
   return (
     <div className="cmp-row">
-      <img src={D.flag(entry.team)} alt="" className="cmp-flag" />
+      {team ? <img src={D.flag(entry.team)} alt="" className="cmp-flag" /> : <div className="cmp-flag" style={{backgroundColor: 'rgba(255,255,255,0.1)'}}></div>}
       <span className="cmp-name">{entry.player}</span>
-      <span className="cmp-team">{team?.name}</span>
+      <span className="cmp-team">{team?.name || entry.team}</span>
       <span className="cmp-val" style={{ color: accent }}>{entry[statKey]}</span>
     </div>
   );
@@ -749,6 +749,42 @@ const Statistics = React.memo(function Statistics({ snapshot }) {
   const [teamCat, setTeamCat] = useState('attack');
   const stats = useMemo(() => computeTournamentStats(snapshot), [snapshot]);
   const catScrollRef = useRef(null);
+  const [apiAssists, setApiAssists] = useState(null);
+
+  useEffect(() => {
+    if (snapshot?.mode === 'live') {
+      let isMounted = true;
+      fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/statistics', { cache: 'no-store' })
+        .then(r => r.json())
+        .then(d => {
+          if (!isMounted) return;
+          const assistsStat = d.stats?.find(s => s.name === 'assistsLeaders');
+          if (assistsStat && assistsStat.leaders) {
+            const mapped = assistsStat.leaders.map(l => {
+              const teamObj = l.athlete?.team;
+              let teamCode = teamObj?.abbreviation || '';
+              if (!D.TEAMS[teamCode] && teamObj?.name) {
+                const found = Object.keys(D.TEAMS).find(k => D.TEAMS[k].name === teamObj.name);
+                if (found) teamCode = found;
+              }
+              return {
+                player: l.athlete?.displayName || '',
+                team: teamCode,
+                assists: l.value
+              };
+            });
+            setApiAssists(mapped);
+          }
+        })
+        .catch(err => console.error("Failed to fetch ESPN statistics", err));
+      return () => { isMounted = false; };
+    } else {
+      setApiAssists(null);
+    }
+  }, [snapshot?.mode]);
+
+  const displayAssists = (snapshot?.mode === 'live' && apiAssists) ? apiAssists : stats?.topAssists;
+
 
   if (!stats || !stats.hasData) {
     return (
@@ -950,9 +986,9 @@ const Statistics = React.memo(function Statistics({ snapshot }) {
               <Ic.ball size={16} />
               <span>TOP ASSISTS</span>
             </div>
-            {stats.topAssists.length > 0
+            {displayAssists?.length > 0
               ? <div className="scroll-list" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '8px', width: '100%'}}>
-                  {stats.topAssists.map((e, i) => (
+                  {displayAssists.map((e, i) => (
                     <CompactRow
                       key={`${e.player}|${e.team}`}
                       entry={e} rank={i + 1}
