@@ -250,7 +250,7 @@ function useColumnCount(ref, minCol = 330, gap = 24) {
     if (!el) return;
     const compute = () => {
       const w = el.clientWidth;
-      if (w > 0) setCols(Math.max(1, Math.floor((w + gap) / (minCol + gap))));
+      if (w > 0) setCols(Math.min(3, Math.max(1, Math.floor((w + gap) / (minCol + gap)))));
     };
     compute();
     const ro = new ResizeObserver(compute);

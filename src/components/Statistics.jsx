@@ -276,6 +276,7 @@ function computeTournamentStats(snapshot) {
 
   // ── Player tallies ──
   const playerGoals = {};
+  const playerAssists = {};
   const playerCards = {};
   const playerOwnGoals = {};
 
@@ -346,6 +347,12 @@ function computeTournamentStats(snapshot) {
     if (st.details) {
       for (const ev of st.details) {
         if (ev.type === 'goal') {
+          if (ev.assist && ev.assist.trim() !== '') {
+            const playerTeam = ev.ownGoal ? (ev.isHome ? b : a) : (ev.isHome ? a : b);
+            const key = `${ev.assist}|${playerTeam}`;
+            if (!playerAssists[key]) playerAssists[key] = { player: ev.assist, team: playerTeam, assists: 0 };
+            playerAssists[key].assists++;
+          }
           if (ev.ownGoal) {
             const playerTeam = ev.isHome ? b : a;
             const key = `${ev.player}|${playerTeam}`;
@@ -423,6 +430,12 @@ function computeTournamentStats(snapshot) {
     if (st.details) {
       for (const ev of st.details) {
         if (ev.type === 'goal') {
+          if (ev.assist && ev.assist.trim() !== '') {
+            const playerTeam = ev.ownGoal ? (ev.isHome ? fxB : fxA) : (ev.isHome ? fxA : fxB);
+            const key = `${ev.assist}|${playerTeam}`;
+            if (!playerAssists[key]) playerAssists[key] = { player: ev.assist, team: playerTeam, assists: 0 };
+            playerAssists[key].assists++;
+          }
           if (ev.ownGoal) {
             const playerTeam = ev.isHome ? fxB : fxA;
             const key = `${ev.player}|${playerTeam}`;
@@ -468,6 +481,7 @@ function computeTournamentStats(snapshot) {
   const penaltyKings = Object.values(playerGoals).filter(p => p.penalties > 0).sort((a, b) => b.penalties - a.penalties || a.player.localeCompare(b.player)).slice(0, 10);
   const topCards = Object.values(playerCards).sort((a, b) => b.reds - a.reds || b.yellows - a.yellows || a.player.localeCompare(b.player)).slice(0, 10);
   const ownGoalsList = Object.values(playerOwnGoals).sort((a, b) => b.ownGoals - a.ownGoals || a.player.localeCompare(b.player)).slice(0, 10);
+  const topAssists = Object.values(playerAssists).sort((a, b) => b.assists - a.assists || a.player.localeCompare(b.player)).slice(0, 10);
 
   // Sort team stats
   const teamsByGoals = [...teamList].sort((a, b) => b.goals - a.goals).slice(0, 8);
@@ -489,7 +503,7 @@ function computeTournamentStats(snapshot) {
   const totalMatches = [...Object.values(states)].filter(s => s && ['ft', 'live', 'ht', 'et1', 'et2', 'et-ht', 'pen'].includes(s.status)).length;
 
   return {
-    topScorers, penaltyKings, topCards, ownGoalsList,
+    topScorers, penaltyKings, topCards, ownGoalsList, topAssists,
     teamsByGoals, teamsByDefense, teamsByPossession, teamsByWins,
     teamsByShots, teamsByDiscipline, teamsByCleanSheets, teamsByCorners,
     teamsDualBar,
@@ -928,6 +942,25 @@ const Statistics = React.memo(function Statistics({ snapshot }) {
               <span>DISCIPLINE</span>
             </div>
             <CardWall cards={stats.topCards} />
+          </div>
+
+          {/* Top Assists */}
+          <div className="compact-panel compact-panel--wide">
+            <div className="compact-panel-head">
+              <Ic.ball size={16} />
+              <span>TOP ASSISTS</span>
+            </div>
+            {stats.topAssists.length > 0
+              ? <div className="scroll-list" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '8px', width: '100%'}}>
+                  {stats.topAssists.map((e, i) => (
+                    <CompactRow
+                      key={`${e.player}|${e.team}`}
+                      entry={e} rank={i + 1}
+                      statKey="assists" accent={A.blue}
+                    />
+                  ))}
+                </div>
+              : <div className="sp-empty">No assists yet</div>}
           </div>
 
           {/* Penalty Kings + Own Goals side by side */}
