@@ -2,6 +2,10 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/api/highlights",
+      "destination": "/api/highlights.js"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
