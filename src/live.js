@@ -576,9 +576,14 @@ function parseRosters(rosters, events = [], currentPeriod = 1) {
    sees a videoId. Any failure — no key, no result, or running the static site
    without the function (plain `vite`, file://) — resolves to null so the UI
    falls back gracefully. */
-export async function fetchHighlight(teamAName, teamBName) {
+export async function fetchHighlight(teamAName, teamBName, scoreA, scoreB) {
   try {
-    const q = `a=${encodeURIComponent(teamAName)}&b=${encodeURIComponent(teamBName)}`;
+    let q = `a=${encodeURIComponent(teamAName)}&b=${encodeURIComponent(teamBName)}`;
+    // Pass the final score (when known) so the proxy can pick the right leg of
+    // a repeat matchup — group game vs a later knockout rematch.
+    if (Number.isInteger(scoreA) && Number.isInteger(scoreB)) {
+      q += `&sa=${scoreA}&sb=${scoreB}`;
+    }
     const r = await fetch(`/api/highlights?${q}`);
     if (!r.ok) {
       // Likely the serverless function isn't deployed (plain `vite`, file://,

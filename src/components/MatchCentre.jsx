@@ -196,8 +196,11 @@ function YouTubeEmbed({ videoId, teamAName, teamBName }) {
   return <div className="mc-hl-video" ref={boxRef} />;
 }
 
-function MatchHighlights({ teamAName, teamBName }) {
-  const key = `${teamAName}__${teamBName}`;
+function MatchHighlights({ teamAName, teamBName, scoreA, scoreB }) {
+  // Score is part of the key so the two legs of a repeat matchup (same teams,
+  // different result) never share a cached video.
+  const hasScore = Number.isInteger(scoreA) && Number.isInteger(scoreB);
+  const key = `${teamAName}__${teamBName}__${hasScore ? `${scoreA}-${scoreB}` : ''}`;
   const searchUrl = `https://www.youtube.com/@SportsMediacorp/search?query=${encodeURIComponent(
     `${teamAName} ${teamBName} highlights`
   )}`;
@@ -217,14 +220,14 @@ function MatchHighlights({ teamAName, teamBName }) {
     }
     let cancelled = false;
     setStatus('loading');
-    fetchHighlight(teamAName, teamBName).then((id) => {
+    fetchHighlight(teamAName, teamBName, scoreA, scoreB).then((id) => {
       _highlightCache.set(key, { videoId: id || null });
       if (cancelled) return;
       setStatus(id ? 'found' : 'none');
       setVideoId(id || null);
     });
     return () => { cancelled = true; };
-  }, [key, teamAName, teamBName]);
+  }, [key, teamAName, teamBName, scoreA, scoreB]);
 
   if (status === 'loading') {
     return (
@@ -524,7 +527,7 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot, mode }) {
             )}
 
             {isFt && viewHighlights ? (
-              <MatchHighlights teamAName={teamA.name} teamBName={teamB.name} />
+              <MatchHighlights teamAName={teamA.name} teamBName={teamB.name} scoreA={st.sa} scoreB={st.sb} />
             ) : (
             <div className="lc-drawer-body">
             <div className="lc-drawer-left">

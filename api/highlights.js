@@ -12,10 +12,16 @@
      Singapore broadcaster for FIFA World Cup 2026™. Their per-match
      highlight titles follow a consistent pattern, e.g.:
      "Jordan 1-3 Argentina | Group J | FIFA World Cup 2026™ Highlights"
-   • We search ONLY this channel (channelId filter) to guarantee
-     every result is from the official broadcaster.
-   • Only return a video whose TITLE names BOTH teams (in either
-     order) so we never surface a wrong match.
+     and sometimes without the score:
+     "Panama vs England | Group L | FIFA World Cup 2026™ Highlights"
+   • We search ONLY this channel (channelId filter) so every result is
+     from the official broadcaster — never another channel's upload.
+   • The channel also posts analysis / reaction / interview clips that
+     name both teams, so a result must ALSO contain the word
+     "Highlights" and name BOTH teams (score "X-Y" or "vs", either
+     order) before we surface it.
+   • Optional sa/sb (this match's final score) are used as a tiebreaker
+     so a repeat matchup (group + knockout) returns the correct leg.
 
    On success: { videoId, title }
    On any failure: { videoId: null, reason, detail? } with a 200.
@@ -23,8 +29,9 @@
    to inspect the reason / candidate titles.
    ============================================================ */
 
-// Mediacorp Sports — official Singapore broadcaster for FIFA WC 2026
-const MEDIACORP_CHANNEL_ID = 'UCMTqHyyQlprpDErBdIZ0OgU';
+// Mediacorp Sports — official Singapore broadcaster for FIFA WC 2026.
+// Channel ID resolved from the canonical URL of youtube.com/@SportsMediacorp.
+const MEDIACORP_CHANNEL_ID = 'UCCc3h5l7RvGzCAbZ1ApxOYw';
 
 // Words that are never part of a team name — ignored in token matching.
 const STOP = new Set([
@@ -68,25 +75,39 @@ function sameTeam(x, y) {
   return tx.some((t) => ty.includes(t));
 }
 
-// Pull the two team names out of a highlight title. Handles, across any
-// "|"-separated segment:
-//   "Panama 0-1 Croatia | Group L | …"   -> ["Panama", "Croatia"]
-//   "Spain 1-1 (4-2) Italy | …"          -> ["Spain", "Italy"]
-//   "… | Netherlands v Sweden | …"       -> ["Netherlands", "Sweden"]
-function extractTeams(title) {
+// Pull the two team names — and the main score, when present — out of a
+// highlight title. Scans each "|"-separated segment and handles:
+//   "Panama 0-1 Croatia | Group L | …"   -> { teams:["Panama","Croatia"], goals:[0,1] }
+//   "Spain 1-1 (4-2) Italy | …"          -> { teams:["Spain","Italy"], goals:[1,1] }
+//   "Panama vs England | Group L | …"    -> { teams:["Panama","England"], goals:null }
+//   "… | Netherlands v Sweden | …"       -> { teams:["Netherlands","Sweden"], goals:null }
+// The first "X-Y" in a segment is the regulation/ET result; a trailing
+// shootout score in parens ("(4-2)") is ignored for the goals reading.
+const SCORE_SPLIT = /\s*\d+\s*[-\u2013\u2014]\s*\d+\s*/;
+const SCORE_FIND = /(\d+)\s*[-\u2013\u2014]\s*(\d+)/;
+function extractMatch(title) {
   const segs = String(title || '').split('|');
   for (const seg of segs) {
+    const m = seg.match(SCORE_FIND);
+    if (!m) continue;
     const parts = seg
-      .split(/\s*\d+\s*[-\u2013\u2014]\s*\d+\s*/)
+      .split(SCORE_SPLIT)
       .map((s) => s.replace(/[()]/g, ' ').trim())
       .filter(Boolean);
-    if (parts.length >= 2) return [parts[0], parts[parts.length - 1]];
+    if (parts.length >= 2) {
+      return { teams: [parts[0], parts[parts.length - 1]], goals: [Number(m[1]), Number(m[2])] };
+    }
   }
   for (const seg of segs) {
     const parts = seg.split(/\s+vs?\.?\s+/i).map((s) => s.trim()).filter(Boolean);
-    if (parts.length >= 2) return [parts[0], parts[parts.length - 1]];
+    if (parts.length >= 2) return { teams: [parts[0], parts[parts.length - 1]], goals: null };
   }
   return null;
+}
+
+function extractTeams(title) {
+  const m = extractMatch(title);
+  return m ? m.teams : null;
 }
 
 // Is `ourName` present anywhere in the title (alias/token aware)?
@@ -101,24 +122,46 @@ function titleHasTeam(title, ourName) {
   return tokens(ourName).some((t) => tt.includes(t));
 }
 
-// Does this title belong to our match (both teams named, either order)?
+// Does this title belong to our match? Requires it to be a HIGHLIGHTS video
+// (so the channel's analysis / reaction / interview clips never qualify) AND
+// to name both teams in either order — via the structured "X-Y"/"vs" reading
+// first, then a looser token net for odd shapes.
 function titleMatchesPair(title, a, b) {
+  if (!/highlights?/i.test(title)) return false;
   const ts = extractTeams(title);
   if (ts) {
     const [eA, eB] = ts;
     if ((sameTeam(eA, a) && sameTeam(eB, b)) || (sameTeam(eA, b) && sameTeam(eB, a))) return true;
   }
-  // Looser net for odd title shapes: both teams named somewhere + "highlight".
-  if (/highlight/i.test(title) && titleHasTeam(title, a) && titleHasTeam(title, b)) return true;
+  // Looser net for odd title shapes: both teams named somewhere.
+  if (titleHasTeam(title, a) && titleHasTeam(title, b)) return true;
   return false;
 }
 
+// If the title carries a score, return it oriented to our (a, b) team order —
+// [goalsA, goalsB] — else null. Used only as a tiebreaker between candidates.
+function titleScoreFor(title, a, b) {
+  const m = extractMatch(title);
+  if (!m || !m.goals) return null;
+  const [eA, eB] = m.teams;
+  const [gx, gy] = m.goals;
+  if (sameTeam(eA, a) && sameTeam(eB, b)) return [gx, gy];
+  if (sameTeam(eA, b) && sameTeam(eB, a)) return [gy, gx];
+  return null;
+}
+
 // Exported for unit testing; the Vercel runtime only uses the default export.
-export { sameTeam, extractTeams, titleMatchesPair };
+export { sameTeam, extractTeams, extractMatch, titleMatchesPair, titleScoreFor };
 
 export default async function handler(req, res) {
   const a = (req.query?.a || '').toString().trim();
   const b = (req.query?.b || '').toString().trim();
+  // Optional final score (digits only) — a tiebreaker for repeat matchups.
+  const saRaw = (req.query?.sa ?? '').toString().trim();
+  const sbRaw = (req.query?.sb ?? '').toString().trim();
+  const wantScore = /^\d+$/.test(saRaw) && /^\d+$/.test(sbRaw)
+    ? [Number(saRaw), Number(sbRaw)]
+    : null;
   const key = process.env.YOUTUBE_API_KEY;
 
   // Highlights for a finished match never change, so cache hard at the edge.
@@ -133,7 +176,7 @@ export default async function handler(req, res) {
   url.searchParams.set('type', 'video');
   url.searchParams.set('channelId', MEDIACORP_CHANNEL_ID);
   url.searchParams.set('videoEmbeddable', 'true');
-  url.searchParams.set('maxResults', '10');
+  url.searchParams.set('maxResults', '15');
   url.searchParams.set('order', 'relevance');
   url.searchParams.set('key', key);
 
@@ -151,13 +194,27 @@ export default async function handler(req, res) {
       return res.status(200).json({ videoId: null, reason: 'no-results' });
     }
 
-    const pick = items.find((it) => titleMatchesPair(it.snippet?.title, a, b));
-    if (!pick) {
+    // Every candidate is from Mediacorp (channelId filter) and is a real
+    // highlights video naming both teams. Keep relevance order as the default.
+    const candidates = items.filter((it) => titleMatchesPair(it.snippet?.title, a, b));
+    if (candidates.length === 0) {
       return res.status(200).json({
         videoId: null,
         reason: 'no-match',
         detail: items.slice(0, 8).map((it) => it.snippet?.title).filter(Boolean),
       });
+    }
+
+    // Tiebreaker: when this match has a known score, prefer the candidate whose
+    // title score matches it — disambiguating a group game from a later rematch.
+    // Falls back to the most relevant candidate when no title carries a score.
+    let pick = candidates[0];
+    if (wantScore) {
+      const exact = candidates.find((it) => {
+        const s = titleScoreFor(it.snippet?.title, a, b);
+        return s && s[0] === wantScore[0] && s[1] === wantScore[1];
+      });
+      if (exact) pick = exact;
     }
 
     return res.status(200).json({ videoId: pick.id.videoId, title: pick.snippet?.title || null });
