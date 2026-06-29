@@ -176,6 +176,12 @@ const Ic = {
       <path d="M11 19l-6-6M8 16l-4 4"/>
     </SI>
   ),
+  clock: (p) => (
+    <SI {...p}>
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+    </SI>
+  ),
 };
 
 /* ── Card shape component ── */
@@ -741,6 +747,211 @@ const TEAM_CATEGORIES = [
   { id: 'discipline', label: 'Discipline', icon: <Ic.whistle size={16} /> },
 ];
 
+const ALL_TIME_SCORERS_BASELINE = [
+  { player: "Miroslav Klose", team: "GER", baseline: 16 },
+  { player: "Ronaldo", team: "BRA", baseline: 15 },
+  { player: "Gerd Müller", team: "GER", baseline: 14 },
+  { player: "Just Fontaine", team: "FRA", baseline: 13 },
+  { player: "Lionel Messi", team: "ARG", baseline: 13 },
+  { player: "Kylian Mbappé", team: "FRA", baseline: 12 },
+  { player: "Pelé", team: "BRA", baseline: 12 },
+  { player: "Sándor Kocsis", team: "HUN", baseline: 11 },
+  { player: "Jürgen Klinsmann", team: "GER", baseline: 11 }
+];
+
+const ALL_TIME_CHAMPIONS_BASELINE = [
+  { code: "BRA", wins: 5 },
+  { code: "GER", wins: 4 },
+  { code: "ITA", wins: 4 },
+  { code: "ARG", wins: 3 },
+  { code: "FRA", wins: 2 },
+  { code: "URU", wins: 2 },
+  { code: "ENG", wins: 1 },
+  { code: "ESP", wins: 1 }
+];
+
+function AllTimeRecords({ snapshot, stats }) {
+  const currentTopScorers = stats?.topScorers || [];
+  
+  const allTimeScorersMap = {};
+  ALL_TIME_SCORERS_BASELINE.forEach(s => {
+    allTimeScorersMap[s.player] = { ...s, goals: s.baseline };
+  });
+
+  currentTopScorers.forEach(s => {
+    if (allTimeScorersMap[s.player]) {
+      allTimeScorersMap[s.player].goals += s.goals;
+    } else {
+      allTimeScorersMap[s.player] = { player: s.player, team: s.team, goals: s.goals };
+    }
+  });
+
+  const allTimeScorersList = Object.values(allTimeScorersMap)
+    .sort((a, b) => b.goals - a.goals)
+    .slice(0, 10);
+
+  const championsMap = {};
+  ALL_TIME_CHAMPIONS_BASELINE.forEach(c => {
+    championsMap[c.code] = { code: c.code, wins: c.wins };
+  });
+
+  if (snapshot?.champion) {
+    if (championsMap[snapshot.champion]) {
+      championsMap[snapshot.champion].wins += 1;
+    } else {
+      championsMap[snapshot.champion] = { code: snapshot.champion, wins: 1 };
+    }
+  }
+
+  const championsList = Object.values(championsMap)
+    .sort((a, b) => b.wins - a.wins || a.code.localeCompare(b.code));
+
+  return (
+    <div className="st-side-panels" style={{ marginTop: '20px' }}>
+      <div className="compact-panel">
+        <div className="compact-panel-head">
+          <Ic.boot size={16} />
+          <span>ALL-TIME TOP SCORERS</span>
+        </div>
+        <div className="scroll-list">
+          {allTimeScorersList.map((e, i) => (
+            <CompactRow
+              key={e.player}
+              entry={e} rank={i + 1}
+              statKey="goals" accent={A.gold}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="compact-panel">
+        <div className="compact-panel-head">
+          <Ic.trophy size={16} />
+          <span>ALL-TIME CHAMPIONS</span>
+        </div>
+        <div className="scroll-list">
+          {championsList.map((c, i) => {
+            const team = D.TEAMS[c.code];
+            return (
+              <div className="cmp-row" key={c.code}>
+                {team ? <img src={D.flag(c.code)} alt="" className="cmp-flag" /> : <div className="cmp-flag" style={{backgroundColor: 'rgba(255,255,255,0.1)'}}></div>}
+                <span className="cmp-name">{team?.name || c.code}</span>
+                <span className="cmp-val" style={{ color: A.gold, display: 'flex', alignItems: 'center' }}>
+                  {c.wins} <Ic.trophy size={12} style={{marginLeft: 4, opacity: 0.8}}/>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PastTournaments() {
+  const [year, setYear] = useState('2022');
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const years = ['2022', '2018', '2014', '2010'];
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/statistics?season=${year}`)
+      .then(r => r.json())
+      .then(d => {
+        if (!isMounted) return;
+        const goalsStat = d.stats?.find(s => s.name === 'goalsLeaders');
+        const assistsStat = d.stats?.find(s => s.name === 'assistsLeaders');
+        
+        const parseLeaders = (statObj) => {
+          if (!statObj || !statObj.leaders) return [];
+          return statObj.leaders.map(l => {
+             let teamCode = l.athlete?.team?.abbreviation || '';
+             if (!D.TEAMS[teamCode] && l.athlete?.team?.name) {
+                const found = Object.keys(D.TEAMS).find(k => D.TEAMS[k].name === l.athlete.team.name);
+                if (found) teamCode = found;
+             }
+             return {
+               player: l.athlete?.displayName || '',
+               team: teamCode,
+               value: l.value
+             };
+          }).slice(0, 10);
+        };
+
+        setData({
+          scorers: parseLeaders(goalsStat),
+          assists: parseLeaders(assistsStat)
+        });
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+    return () => { isMounted = false; };
+  }, [year]);
+
+  return (
+    <div className="past-tournaments-sec" style={{ marginTop: '20px' }}>
+      <div className="cat-carousel" style={{ marginBottom: '16px', justifyContent: 'center' }}>
+        {years.map(y => (
+          <button
+            key={y}
+            className={`cat-pill ${year === y ? 'cat-pill--on' : ''}`}
+            onClick={() => setYear(y)}
+          >
+            {y}
+          </button>
+        ))}
+      </div>
+      
+      {loading ? (
+         <div className="sp-empty">Loading {year} statistics...</div>
+      ) : data ? (
+        <div className="st-side-panels">
+          <div className="compact-panel">
+            <div className="compact-panel-head">
+              <Ic.boot size={16} />
+              <span>{year} TOP SCORERS</span>
+            </div>
+            {data.scorers.length > 0 ? (
+              <div className="scroll-list">
+                {data.scorers.map((e, i) => (
+                  <CompactRow
+                    key={`${e.player}-${i}`}
+                    entry={{...e, goals: e.value}} rank={i + 1}
+                    statKey="goals" accent={A.gold}
+                  />
+                ))}
+              </div>
+            ) : <div className="sp-empty">No data available</div>}
+          </div>
+
+          <div className="compact-panel">
+            <div className="compact-panel-head">
+              <Ic.ball size={16} />
+              <span>{year} TOP ASSISTS</span>
+            </div>
+            {data.assists.length > 0 ? (
+              <div className="scroll-list">
+                {data.assists.map((e, i) => (
+                  <CompactRow
+                    key={`${e.player}-${i}`}
+                    entry={{...e, assists: e.value}} rank={i + 1}
+                    statKey="assists" accent={A.blue}
+                  />
+                ))}
+              </div>
+            ) : <div className="sp-empty">No data available</div>}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════ */
@@ -946,6 +1157,9 @@ const Statistics = React.memo(function Statistics({ snapshot }) {
         <button className={`st-tab ${tab === 'teams' ? 'st-tab--on' : ''}`} onClick={() => setTab('teams')}>
           <Ic.trophy size={15} /> Teams
         </button>
+        <button className={`st-tab ${tab === 'history' ? 'st-tab--on' : ''}`} onClick={() => setTab('history')}>
+          <Ic.clock size={15} /> History
+        </button>
       </div>
 
       {/* ── Players Tab ── */}
@@ -1060,6 +1274,15 @@ const Statistics = React.memo(function Statistics({ snapshot }) {
           <div className="tc-content" key={teamCat}>
             {renderTeamCategory()}
           </div>
+        </div>
+      )}
+
+      {/* ── History Tab ── */}
+      {tab === 'history' && (
+        <div className="st-history-layout" key="h">
+          <AllTimeRecords snapshot={snapshot} stats={stats} />
+          <div className="rule" style={{ margin: '30px 0', opacity: 0.3 }} />
+          <PastTournaments />
         </div>
       )}
     </RevealSection>

@@ -311,15 +311,37 @@ function buildBadgeIndex(st, sumEvents, homeId, awayId, injuries) {
 
 function applyBadges(side, map) {
   if (!side || !map) return;
-  // last-name fallback index for "K. De Bruyne" vs "Kevin De Bruyne" mismatches
-  const byLast = new Map();
-  map.forEach(ev => { if (ev._last && !byLast.has(ev._last)) byLast.set(ev._last, ev); });
-  const apply = (p) => {
-    const ev = map.get(pnorm(p.name)) || byLast.get(lastTok(p.name));
-    if (ev) p.ev = ev;
+  
+  // Try exact matches first
+  const applyExact = (p) => {
+    const ev = map.get(pnorm(p.name));
+    if (ev) {
+      p.ev = ev;
+      ev._claimed = true;
+    }
   };
-  side.xi.forEach(apply);
-  side.subs.forEach(apply);
+  side.xi.forEach(applyExact);
+  side.subs.forEach(applyExact);
+
+  // Fallback to last-name index for mismatches, using only unclaimed events
+  const byLast = new Map();
+  map.forEach(ev => { 
+    if (!ev._claimed && ev._last && !byLast.has(ev._last)) {
+      byLast.set(ev._last, ev);
+    }
+  });
+
+  const applyFallback = (p) => {
+    if (!p.ev) {
+      const ev = byLast.get(lastTok(p.name));
+      if (ev && !ev._claimed) {
+        p.ev = ev;
+        ev._claimed = true;
+      }
+    }
+  };
+  side.xi.forEach(applyFallback);
+  side.subs.forEach(applyFallback);
 }
 
 /* Second-half starting XI: API-Football only gives the kickoff XI, so we apply
@@ -337,7 +359,12 @@ function buildSecondHalfXI(side, sumEvents, teamId) {
     const inName = e.participants?.[0]?.athlete?.displayName;
     const outName = e.participants?.[1]?.athlete?.displayName;
     if (!inName || !outName) return;
-    const i = xi2.findIndex(p => pnorm(p.name) === pnorm(outName) || lastTok(p.name) === lastTok(outName));
+    
+    let i = xi2.findIndex(p => pnorm(p.name) === pnorm(outName));
+    if (i === -1) {
+      i = xi2.findIndex(p => lastTok(p.name) === lastTok(outName));
+    }
+    
     if (i === -1) return;
     xi2[i] = {
       ...xi2[i],

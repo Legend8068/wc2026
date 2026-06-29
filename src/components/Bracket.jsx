@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import LottieComponent from 'lottie-react';
 import D from '../data';
 import RevealSection from './RevealSection';
 import BrandText from './BrandText';
 import jugglingAnim from '../assets/juggling.json';
+import fifaLogoAnim from '../assets/Fifa-logo.json';
 
 const Lottie = LottieComponent.default || LottieComponent;
 
@@ -23,6 +24,29 @@ function ScoreDisplay({ value }) {
 
   return <span className={pop ? 'pop' : ''}>{value !== null ? value : ''}</span>;
 }
+
+/* ── helper: measure ko-row centers relative to a reference element ── */
+function getRowCenter(matchId, side, refEl) {
+  if (!refEl) return null;
+  const card = document.getElementById(matchId);
+  if (!card) return null;
+  const row = card.querySelector(`.ko-row[data-side="${side}"]`);
+  if (!row) return null;
+  const refRect = refEl.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  return rowRect.top + rowRect.height / 2 - refRect.top;
+}
+
+function getCardCenter(matchId, refEl) {
+  if (!refEl) return null;
+  const card = document.getElementById(matchId);
+  if (!card) return null;
+  const refRect = refEl.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+  return cardRect.top + cardRect.height / 2 - refRect.top;
+}
+
+
 
 function KoCard({ m, st, teams }) {
   const codeA = teams?.[0];
@@ -251,17 +275,39 @@ function ThirdPlaceCard({ m, st, teams }) {
 function ChampionsBox({ champion }) {
   const isCrowned = !!champion;
   const team = champion ? D.TEAMS[champion] : null;
+  const lottieRef = useRef(null);
+  const containerRef = useRef(null);
+  const hasPlayed = useRef(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !hasPlayed.current) {
+          if (lottieRef.current) {
+            lottieRef.current.play();
+            hasPlayed.current = true;
+          }
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div className={`b-champ ${isCrowned ? 'crowned' : ''}`} id="champ-box">
-      <svg className="trophy" width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="#e8b84b" strokeWidth="1.3">
-        <path d="M7 4h10v4a5 5 0 0 1-10 0V4z"></path>
-        <path d="M7 5H4v2a3 3 0 0 0 3 3"></path>
-        <path d="M17 5h3v2a3 3 0 0 1-3 3"></path>
-        <path d="M12 13v3"></path>
-        <path d="M9.5 20h5"></path>
-        <path d="M10 16.5h4V20h-4z"></path>
-      </svg>
+    <div className={`b-champ ${isCrowned ? 'crowned' : ''}`} id="champ-box" ref={containerRef}>
+      <Lottie
+        lottieRef={lottieRef}
+        animationData={fifaLogoAnim}
+        loop={false}
+        autoplay={false}
+        style={{ width: 140, height: 140, margin: '0 auto' }}
+      />
       <div className="b-champ-label">WORLD CHAMPIONS</div>
       {champion ? (
         <div className="b-champ-team">
@@ -277,98 +323,177 @@ function ChampionsBox({ champion }) {
   );
 }
 
-function ElbowSvg({ count, winA1, winA2, winB1, winB2, dir }) {
-  const isToR = dir === 'to-r';
-  const H = 836 / count;
-  
-  // Faint lines: center to center
-  const yA_center = H / 4;
-  const yB_center = (3 * H) / 4;
-  const y_out_center = H / 2;
-
-  // Highlighted line source coordinates (exact team row)
-  const yA1 = H / 4 - 1;
-  const yA2 = H / 4 + 27;
-  const yB1 = (3 * H) / 4 - 1;
-  const yB2 = (3 * H) / 4 + 27;
-
-  // Outgoing slots
-  const y_out_top = H / 2 - 1;
-  const y_out_bottom = H / 2 + 27;
-
-  // SVG width = 64
-  const startX = isToR ? 0 : 64;
-  const midX = 32;
-  const endX = isToR ? 64 : 0;
-
-  return (
-    <svg width="100%" height="100%" style={{ display: 'block' }}>
-      {/* Faint default lines */}
-      {!winA1 && !winA2 && (
-        <path 
-          d={`M ${startX} ${yA_center} L ${midX} ${yA_center} L ${midX} ${y_out_center} L ${endX} ${y_out_center}`} 
-          className="elbow-path" 
-        />
-      )}
-      {!winB1 && !winB2 && (
-        <path 
-          d={`M ${startX} ${yB_center} L ${midX} ${yB_center} L ${midX} ${y_out_center} L ${endX} ${y_out_center}`} 
-          className="elbow-path" 
-        />
-      )}
-
-      {/* Highlighted lines */}
-      {winA1 && <path d={`M ${startX} ${yA1} L ${midX} ${yA1} L ${midX} ${y_out_top} L ${endX} ${y_out_top}`} className="elbow-path highlighted" />}
-      {winA2 && <path d={`M ${startX} ${yA2} L ${midX} ${yA2} L ${midX} ${y_out_top} L ${endX} ${y_out_top}`} className="elbow-path highlighted" />}
-      {winB1 && <path d={`M ${startX} ${yB1} L ${midX} ${yB1} L ${midX} ${y_out_bottom} L ${endX} ${y_out_bottom}`} className="elbow-path highlighted" />}
-      {winB2 && <path d={`M ${startX} ${yB2} L ${midX} ${yB2} L ${midX} ${y_out_bottom} L ${endX} ${y_out_bottom}`} className="elbow-path highlighted" />}
-    </svg>
-  );
-}
+/* ─────────────── DOM-measured Connector Column ─────────────── */
 
 function ConnCol({ matches, states, teams, dir }) {
   if (!matches) return null;
+  const ref = useRef(null);
+  const [paths, setPaths] = useState([]);
+  const isToR = dir === 'to-r';
+  const SVG_W = 64;
   const count = matches.length / 2;
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const newPaths = [];
+    for (let idx = 0; idx < count; idx++) {
+      const matchA = matches[2 * idx];
+      const matchB = matches[2 * idx + 1];
+      const winnerCodeA = states[matchA.id]?.status === 'ft' ? states[matchA.id]?.winner : null;
+      const winnerCodeB = states[matchB.id]?.status === 'ft' ? states[matchB.id]?.winner : null;
+      const winASide = winnerCodeA ? (teams[matchA.id]?.[0] === winnerCodeA ? 0 : 1) : null;
+      const winBSide = winnerCodeB ? (teams[matchB.id]?.[0] === winnerCodeB ? 0 : 1) : null;
+
+      const cardCenterA = getCardCenter(matchA.id, el);
+      const cardCenterB = getCardCenter(matchB.id, el);
+
+      const yA = winASide !== null
+        ? getRowCenter(matchA.id, winASide, el)
+        : cardCenterA;
+      const yB = winBSide !== null
+        ? getRowCenter(matchB.id, winBSide, el)
+        : cardCenterB;
+
+      if (yA != null && yB != null && cardCenterA != null && cardCenterB != null) {
+        newPaths.push({
+          yA,
+          yB,
+          yOut: (cardCenterA + cardCenterB) / 2,
+          isHighA: winASide !== null,
+          isHighB: winBSide !== null
+        });
+      }
+    }
+
+    setPaths(prev => {
+      const json = JSON.stringify(newPaths);
+      if (JSON.stringify(prev) === json) return prev;
+      return newPaths;
+    });
+  });
+
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setTick(t => t + 1));
+    ro.observe(el);
+    const bracket = document.getElementById('bracket-root');
+    if (bracket) ro.observe(bracket);
+    
+    // Observe the specific match cards this connector relies on
+    matches.forEach(m => {
+      const card = document.getElementById(m.id);
+      if (card) ro.observe(card);
+    });
+    
+    return () => ro.disconnect();
+  }, [matches]);
+
+  const startX = isToR ? 0 : SVG_W;
+  const midX = SVG_W / 2;
+  const endX = isToR ? SVG_W : 0;
+
   return (
-    <div className={`b-conn ${dir}`}>
-      {Array.from({ length: count }).map((_, idx) => {
-        const matchA = matches[2 * idx];
-        const matchB = matches[2 * idx + 1];
-
-        const winnerCodeA = states[matchA.id]?.status === 'ft' ? states[matchA.id]?.winner : null;
-        const winnerCodeB = states[matchB.id]?.status === 'ft' ? states[matchB.id]?.winner : null;
-
-        const winA1 = winnerCodeA && teams[matchA.id]?.[0] === winnerCodeA;
-        const winA2 = winnerCodeA && teams[matchA.id]?.[1] === winnerCodeA;
-        const winB1 = winnerCodeB && teams[matchB.id]?.[0] === winnerCodeB;
-        const winB2 = winnerCodeB && teams[matchB.id]?.[1] === winnerCodeB;
-
-        return (
-          <div className="elbow" key={idx}>
-            <ElbowSvg 
-              count={count} 
-              winA1={winA1} winA2={winA2} 
-              winB1={winB1} winB2={winB2} 
-              dir={dir} 
-            />
-          </div>
-        );
-      })}
+    <div className={`b-conn ${dir}`} ref={ref}>
+      <svg
+        width="100%"
+        height="100%"
+        style={{ display: 'block', position: 'absolute', top: 0, left: 0, overflow: 'visible' }}
+      >
+        {paths.map((p, i) => {
+          return (
+            <React.Fragment key={i}>
+              <path
+                d={`M ${startX} ${p.yA} L ${midX} ${p.yA} L ${midX} ${p.yOut} L ${endX} ${p.yOut}`}
+                className={`elbow-path${p.isHighA ? ' highlighted' : ''}`}
+              />
+              <path
+                d={`M ${startX} ${p.yB} L ${midX} ${p.yB} L ${midX} ${p.yOut} L ${endX} ${p.yOut}`}
+                className={`elbow-path${p.isHighB ? ' highlighted' : ''}`}
+              />
+            </React.Fragment>
+          );
+        })}
+      </svg>
     </div>
   );
 }
 
-function Straight({ match, states }) {
-  const isWinner = !!(match && states[match.id]?.status === 'ft' && states[match.id]?.winner);
+/* ─────────────── DOM-measured Straight connector (SF → Final) ─────────────── */
+
+function Straight({ match, states, teams, dir }) {
+  if (!match) return null;
+  const ref = useRef(null);
+  const [line, setLine] = useState(null);
+  const isToR = dir === 'to-r';
+  const SVG_W = 46;
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const winnerCode = states[match.id]?.status === 'ft' ? states[match.id]?.winner : null;
+    const winSide = winnerCode ? (teams[match.id]?.[0] === winnerCode ? 0 : 1) : null;
+
+    const ySrc = winSide !== null
+      ? getRowCenter(match.id, winSide, el)
+      : getCardCenter(match.id, el);
+
+    // Keep it perfectly horizontal, pointing directly to the final card
+    const yDst = ySrc;
+
+    if (ySrc == null || yDst == null) {
+      setLine(prev => prev === null ? prev : null);
+      return;
+    }
+
+    const newLine = { ySrc, yDst, isHigh: winSide !== null };
+    setLine(prev => {
+      if (prev && prev.ySrc === newLine.ySrc && prev.yDst === newLine.yDst && prev.isHigh === newLine.isHigh) return prev;
+      return newLine;
+    });
+  });
+
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setTick(t => t + 1));
+    ro.observe(el);
+    const bracket = document.getElementById('bracket-root');
+    if (bracket) ro.observe(bracket);
+    
+    // Observe the match card and the final card
+    const card = document.getElementById(match.id);
+    if (card) ro.observe(card);
+    const finalCard = document.getElementById('M104');
+    if (finalCard) ro.observe(finalCard);
+    
+    return () => ro.disconnect();
+  }, [match.id]);
+
+  const startX = isToR ? 0 : SVG_W;
+  const endX = isToR ? SVG_W : 0;
+
   return (
-    <div className="b-conn-straight">
-      <svg width="100%" height="100%" viewBox="0 0 46 100" preserveAspectRatio="none" style={{ display: 'block' }}>
-        <path 
-          d="M 0 50 L 46 50" 
-          className={`elbow-path ${isWinner ? 'highlighted' : ''}`}
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
+    <div className="b-conn-straight" ref={ref}>
+      {line && (
+        <svg
+          width="100%"
+          height="100%"
+          style={{ display: 'block', position: 'absolute', top: 0, left: 0, overflow: 'visible' }}
+        >
+          <path
+            d={`M ${startX} ${line.ySrc} L ${endX} ${line.yDst}`}
+            className={`elbow-path${line.isHigh ? ' highlighted' : ''}`}
+          />
+        </svg>
+      )}
     </div>
   );
 }
@@ -437,7 +562,7 @@ const Bracket = React.memo(function Bracket({ snapshot }) {
           <ConnCol matches={ko('QF', 'L')} states={states} teams={teams} dir="to-r" />
 
           <RoundCol matches={ko('SF', 'L')} colCls="b-col-sf" label="SEMI-FINALS" states={states} teams={teams} />
-          <Straight match={ko('SF', 'L')[0]} states={states} />
+          <Straight match={ko('SF', 'L')[0]} states={states} teams={teams} dir="to-r" />
 
           {/* Center Column */}
           <div className="b-col b-col-c">
@@ -446,7 +571,7 @@ const Bracket = React.memo(function Bracket({ snapshot }) {
             <ThirdPlaceCard m={m103} st={states.M103} teams={teams.M103} />
           </div>
 
-          <Straight match={ko('SF', 'R')[0]} states={states} />
+          <Straight match={ko('SF', 'R')[0]} states={states} teams={teams} dir="to-l" />
           <RoundCol matches={ko('SF', 'R')} colCls="b-col-sf" label="SEMI-FINALS" states={states} teams={teams} />
 
           <ConnCol matches={ko('QF', 'R')} states={states} teams={teams} dir="to-l" />

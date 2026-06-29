@@ -1798,7 +1798,7 @@ section {
   align-items: stretch;
   justify-content: center;
   min-width: 2840px;
-  height: 880px;
+  height: 1240px;
   padding-top: 44px;
   margin: 0 auto;
 }
@@ -1852,13 +1852,7 @@ section {
 /* connector columns */
 .b-conn {
   flex: 0 0 64px;
-  display: flex;
-  flex-direction: column;
-}
-
-.b-conn .elbow {
   position: relative;
-  flex: 1;
 }
 
 .elbow-path {
@@ -1933,6 +1927,7 @@ section {
   display: flex;
   align-items: center;
   gap: 8px;
+  height: 32px;
 }
 
 /* placeholder seal — simpler rounded version */
@@ -1978,7 +1973,6 @@ section {
   color: var(--ink);
   border-bottom: none;
   line-height: 1.3;
-  height: 22px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1995,8 +1989,8 @@ section {
 
 .ko-score {
   min-width: 30px;
-  min-height: 26px;
-  padding: 4px 6px;
+  height: 28px;
+  padding: 0 6px;
   border: none;
   border-radius: 8px;
   flex: none;
@@ -2063,9 +2057,13 @@ section {
   font-family: var(--head);
   font-weight: 700;
   letter-spacing: 0.12em;
-  font-size: 16px;
+  font-size: 24px;
   color: var(--gold);
-  margin-top: 8px;
+  margin-top: 12px;
+}
+
+.b-champ:not(.crowned) .b-champ-label {
+  animation: pulse-opacity 2s infinite ease-in-out;
 }
 
 .b-champ-team {
@@ -2073,18 +2071,18 @@ section {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 12px;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 26px;
+  font-size: 38px;
   letter-spacing: 0.02em;
   color: var(--white);
   text-shadow: 0 0 30px rgba(245, 197, 66, 0.5);
 }
 
 .b-champ-team img {
-  width: 42px;
-  height: 29px;
+  width: 60px;
+  height: 42px;
   object-fit: cover;
   border: 2px solid var(--gold);
   border-radius: 8px;
@@ -2099,9 +2097,15 @@ section {
    beneath the WORLD CHAMPIONS title. */
 .b-champ-await {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  margin-top: 6px;
+  margin-top: 12px;
+}
+
+@keyframes pulse-opacity {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
 }
 
 .final-card {

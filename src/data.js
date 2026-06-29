@@ -51,7 +51,12 @@ export const TEAMS = {
   ENG: { name: 'England',        iso: 'gb-eng', str: 90 },
   CRO: { name: 'Croatia',        iso: 'hr',     str: 83 },
   GHA: { name: 'Ghana',          iso: 'gh',     str: 72 },
-  PAN: { name: 'Panama',         iso: 'pa',     str: 67 }
+  PAN: { name: 'Panama',         iso: 'pa',     str: 67 },
+  ITA: { name: 'Italy',          iso: 'it',     str: 88 },
+  HUN: { name: 'Hungary',        iso: 'hu',     str: 70 },
+  RUS: { name: 'Russia',         iso: 'ru',     str: 78 },
+  CRC: { name: 'Costa Rica',     iso: 'cr',     str: 72 },
+  SVK: { name: 'Slovakia',       iso: 'sk',     str: 75 }
 };
 
 export const flag = (code) => `https://flagcdn.com/${TEAMS[code]?.iso}.svg`;

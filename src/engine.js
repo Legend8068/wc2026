@@ -309,21 +309,21 @@ function decorateSide(side, matchId, team, isHomeSide, details, minute) {
   const findByName = (name) => {
     if (!name) return null;
     const normName = norm(name);
-    const last = lastTok(name);
 
-    // First try starting XI
-    let found = side.xi.find(p => {
-      const n = norm(p.name);
-      return n === normName || lastTok(p.name) === last;
-    });
+    // First try starting XI exact match
+    let found = side.xi.find(p => norm(p.name) === normName);
     if (found) return found;
 
-    // Then try substitutes list
-    found = side.subs.find(p => {
-      const n = norm(p.name);
-      return n === normName || lastTok(p.name) === last;
-    });
-    return found;
+    // Then try substitutes exact match
+    found = side.subs.find(p => norm(p.name) === normName);
+    if (found) return found;
+
+    // Fallback to last name match
+    const last = lastTok(name);
+    found = side.xi.find(p => lastTok(p.name) === last);
+    if (found) return found;
+    
+    return side.subs.find(p => lastTok(p.name) === last);
   };
 
   (details || []).forEach(d => {
