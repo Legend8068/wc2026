@@ -411,7 +411,7 @@ function ConnCol({ matches, states, teams, dir }) {
     });
     
     return () => ro.disconnect();
-  }, [matches]);
+  }, []);
 
   const startX = isToR ? 0 : SVG_W;
   const midX = SVG_W / 2;
@@ -420,7 +420,7 @@ function ConnCol({ matches, states, teams, dir }) {
   if (!matches) return null;
 
   return (
-    <div className={`b-conn-col ${dir}`} ref={ref}>
+    <div className={`b-conn ${dir}`} ref={ref}>
       <svg
         width="100%"
         height="100%"
