@@ -385,7 +385,14 @@ const MatchCentre = React.memo(function MatchCentre({ snapshot, mode }) {
       }
       // Expanding — remember where the user was in the horizontal list.
       if (stripRef.current) savedScrollRef.current = stripRef.current.scrollLeft;
-      setViewPens(false);
+      
+      const st = states[matchId];
+      if (st && (st.pensA > 0 || st.pensB > 0 || st.status === 'pen')) {
+        setViewPens(true);
+      } else {
+        setViewPens(false);
+      }
+      
       setViewHighlights(false);
       return matchId;
     });

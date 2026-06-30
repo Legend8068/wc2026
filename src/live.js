@@ -122,7 +122,7 @@ function parseEvent(ev) {
       const teamId = d.team?.id || '';
       const isHomeTeam = teamId === home.id;
 
-      if (isGoal || isRed || isYellow) {
+      if ((isGoal || isRed || isYellow) && !d.shootout) {
         details.push({
           type: isGoal ? 'goal' : isRed ? 'red' : 'yellow',
           typeText,
