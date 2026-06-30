@@ -299,6 +299,23 @@ function ChampionsBox({ champion }) {
     return () => observer.disconnect();
   }, []);
 
+  // Hover steers the FIFA-logo animation: pointing at it rewinds (plays in
+  // reverse from the current frame), and moving off resumes forward from
+  // wherever the rewind stopped. lottie-web's play() always continues from the
+  // current frame, so the two directions hand off seamlessly mid-animation.
+  const rewindLogo = () => {
+    const l = lottieRef.current;
+    if (!l) return;
+    l.setDirection(-1);
+    l.play();
+  };
+  const resumeLogo = () => {
+    const l = lottieRef.current;
+    if (!l) return;
+    l.setDirection(1);
+    l.play();
+  };
+
   return (
     <div className={`b-champ ${isCrowned ? 'crowned' : ''}`} id="champ-box" ref={containerRef}>
       <Lottie
@@ -306,6 +323,8 @@ function ChampionsBox({ champion }) {
         animationData={fifaLogoAnim}
         loop={false}
         autoplay={false}
+        onMouseEnter={rewindLogo}
+        onMouseLeave={resumeLogo}
         style={{ width: 140, height: 140, margin: '0 auto' }}
       />
       <div className="b-champ-label">WORLD CHAMPIONS</div>
@@ -326,14 +345,14 @@ function ChampionsBox({ champion }) {
 /* ─────────────── DOM-measured Connector Column ─────────────── */
 
 function ConnCol({ matches, states, teams, dir }) {
-  if (!matches) return null;
   const ref = useRef(null);
   const [paths, setPaths] = useState([]);
   const isToR = dir === 'to-r';
   const SVG_W = 64;
-  const count = matches.length / 2;
+  const count = matches ? matches.length / 2 : 0;
 
   useLayoutEffect(() => {
+    if (!matches) return;
     const el = ref.current;
     if (!el) return;
 
@@ -377,6 +396,7 @@ function ConnCol({ matches, states, teams, dir }) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
+    if (!matches) return;
     const el = ref.current;
     if (!el) return;
     const ro = new ResizeObserver(() => setTick(t => t + 1));
@@ -397,8 +417,10 @@ function ConnCol({ matches, states, teams, dir }) {
   const midX = SVG_W / 2;
   const endX = isToR ? SVG_W : 0;
 
+  if (!matches) return null;
+
   return (
-    <div className={`b-conn ${dir}`} ref={ref}>
+    <div className={`b-conn-col ${dir}`} ref={ref}>
       <svg
         width="100%"
         height="100%"
@@ -426,13 +448,13 @@ function ConnCol({ matches, states, teams, dir }) {
 /* ─────────────── DOM-measured Straight connector (SF → Final) ─────────────── */
 
 function Straight({ match, states, teams, dir }) {
-  if (!match) return null;
   const ref = useRef(null);
   const [line, setLine] = useState(null);
   const isToR = dir === 'to-r';
   const SVG_W = 46;
 
   useLayoutEffect(() => {
+    if (!match) return;
     const el = ref.current;
     if (!el) return;
 
@@ -461,6 +483,7 @@ function Straight({ match, states, teams, dir }) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
+    if (!match) return;
     const el = ref.current;
     if (!el) return;
     const ro = new ResizeObserver(() => setTick(t => t + 1));
@@ -475,7 +498,9 @@ function Straight({ match, states, teams, dir }) {
     if (finalCard) ro.observe(finalCard);
     
     return () => ro.disconnect();
-  }, [match.id]);
+  }, [match?.id]);
+
+  if (!match) return null;
 
   const startX = isToR ? 0 : SVG_W;
   const endX = isToR ? SVG_W : 0;
