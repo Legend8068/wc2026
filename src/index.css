@@ -6036,3 +6036,74 @@ footer .f-note {
 .hero-map .hm-map-shapes polygon {
   fill: #ffffff !important;
 }
+
+/* ============================== FOOTBALL WAVE ANIMATIONS ============================== */
+.floating-footballs {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.wave-football-wrapper {
+  position: absolute;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  opacity: 0.6;
+  animation: float-ball linear infinite;
+  left: 100%;
+}
+
+.wave-football {
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.8);
+  animation: bob-ball 2s ease-in-out infinite alternate;
+}
+
+.wave-football.spin {
+  animation: bob-ball 2s ease-in-out infinite alternate, spin-ball 6s linear infinite;
+}
+
+@keyframes float-ball {
+  0% { transform: translateX(5vw); }
+  100% { transform: translateX(-105vw); }
+}
+
+@keyframes bob-ball {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+
+@keyframes spin-ball {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+/* Individual balls configuration */
+.fb-1 { animation-duration: 40s; animation-delay: 0s; bottom: 15px; opacity: 0.8; width: 28px; height: 28px; }
+.fb-1 .wave-football { animation-delay: -1s, 0s; animation-duration: 2.2s, 5s; }
+
+.fb-2 { animation-duration: 40s; animation-delay: -8s; bottom: 25px; opacity: 1.0; width: 34px; height: 34px; }
+.fb-2 .wave-football { animation-delay: -0.5s; animation-duration: 1.8s; }
+
+.fb-3 { animation-duration: 40s; animation-delay: -16s; bottom: 10px; opacity: 0.9; width: 45px; height: 45px; }
+.fb-3 .wave-football { animation-delay: -1.2s; animation-duration: 2.5s; }
+
+.fb-4 { animation-duration: 40s; animation-delay: -24s; bottom: 10px; opacity: 0.7; width: 55px; height: 55px; }
+.fb-4 .wave-football { animation-delay: -0.2s; animation-duration: 2s; }
+
+.fb-5 { animation-duration: 40s; animation-delay: -32s; bottom: 28px; opacity: 0.85; width: 32px; height: 32px; }
+.fb-5 .wave-football { animation-delay: -1.5s, -1.5s; animation-duration: 2.1s, 5.5s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-football-wrapper, .wave-football {
+    animation: none !important;
+    display: none;
+  }
+}
